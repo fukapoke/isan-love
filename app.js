@@ -91,36 +91,32 @@ try{
 
 renderPending();
 render();load();
-// Keep the home-screen URL stable. Only app assets update; local dictionary keys remain unchanged.
-const APP_VERSION=23;
+// Data is stored separately in localStorage and is never reset by app updates.
+const APP_VERSION=24;
+let updateBusy=false;
+async function checkUpdate(){
+ if(updateBusy||!navigator.onLine||document.hidden)return;
+ updateBusy=true;
+ try{
+  const response=await fetch("./index.html?update_check="+Date.now(),{cache:"no-store"});
+  if(!response.ok)return;
+  const match=(await response.text()).match(/app[.]js[?]v=([0-9]+)/);
+  if(!match||Number(match[1])<=APP_VERSION)return;
+  const version=match[1];
+  if(sessionStorage.getItem("isanlove_reload_target")===version)return;
+  sessionStorage.setItem("isanlove_reload_target",version);
+  const url=new URL(location.href);
+  url.searchParams.set("app_update",version);
+  location.replace(url.href);
+ }catch(e){}finally{updateBusy=false}
+}
 if("serviceWorker" in navigator){
- navigator.serviceWorker.register("./sw.js").then(reg=>{
-   reg.update().catch(()=>{});
-   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!document.hidden)checkUpdate()});
+ navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>{
+  reg.update().catch(()=>{});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){reg.update().catch(()=>{});checkUpdate()}});
+  window.addEventListener("focus",()=>{reg.update().catch(()=>{});checkUpdate()});
  }).catch(()=>{});
 }
-let checkingUpdate=false;
-async function checkUpdate(){
- if(checkingUpdate||!navigator.onLine||document.hidden)return;
- checkingUpdate=true;
- try{
-  const response=await fetch("./index.html?version-check="+Date.now(),{cache:"no-store"});
-  if(!response.ok)return;
-  const html=await response.text();
-  const match=html.match(/app[.]js[?]v=([0-9]+)/);
-  if(!match)return;
-  const remote=Number(match[1]);
-  if(remote<=APP_VERSION)return;
-  const key="isanlove_last_reload_version";
-  if(sessionStorage.getItem(key)===String(remote))return;
-  sessionStorage.setItem(key,String(remote));
-  const url=new URL(location.href);
-  url.searchParams.set("rev",String(remote));
-  location.replace(url.href);
- }catch(e){}finally{checkingUpdate=false}
-}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
-window.addEventListener("focus",checkUpdate);
 window.addEventListener("pageshow",checkUpdate);
 checkUpdate();
 })();
