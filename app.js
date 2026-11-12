@@ -115,10 +115,29 @@ $("calGrid").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-
 $("calUndated").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-set]");if(!btn)return;const input=Array.from($("calUndated").querySelectorAll("[data-cal-input]")).find(x=>x.dataset.calInput===btn.dataset.calSet);if(input&&input.value)setFonDate(btn.dataset.calSet,input.value);else alert("登録日を選んでね")});
 $("calEntries").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-open]");if(!btn)return;const x=own.find(v=>v.id===btn.dataset.calOpen);if(x){$("q").value=x.th;showTab("search");render();$("results").scrollIntoView({block:"start"})}});
 
+// Private voice clips live only in this device's IndexedDB, never in public GitHub.
+const voiceDb=()=>new Promise((resolve,reject)=>{const req=indexedDB.open("isanlove_private_voice",1);req.onupgradeneeded=()=>req.result.createObjectStore("clips");req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+async function voiceOperation(mode,id,file){const db=await voiceDb();return new Promise((resolve,reject)=>{const tx=db.transaction("clips",mode==="get"?"readonly":"readwrite"),st=tx.objectStore("clips");const req=mode==="put"?st.put(file,id):mode==="delete"?st.delete(id):st.get(id);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);tx.oncomplete=()=>db.close()})}
+let activeVoiceUrl=null;
+async function handleVoiceAction(e){
+ const save=e.target.closest("[data-voice-save]"),play=e.target.closest("[data-voice-play]"),remove=e.target.closest("[data-voice-delete]");
+ const id=(save&&save.dataset.voiceSave)||(play&&play.dataset.voicePlay)||(remove&&remove.dataset.voiceDelete);
+ if(!id)return;
+ try{
+  if(save){const input=Array.from($("results").querySelectorAll("[data-voice-file]")).find(n=>n.dataset.voiceFile===id),file=input&&input.files[0];if(!file){alert("先に音声ファイルを選んでね");return}if(file.size>25*1024*1024){alert("音声は25MB以下にしてね");return}await voiceOperation("put",id,file);alert("このiPhoneに音声を保存したよ 💜（バックアップJSONには含まれません）");return}
+  if(remove){if(confirm("この言葉の音声だけ削除する？")){await voiceOperation("delete",id);alert("音声を削除したよ")}return}
+  const file=await voiceOperation("get",id);if(!file){alert("この端末にはまだ音声が保存されていないよ");return}
+  if(activeVoiceUrl)URL.revokeObjectURL(activeVoiceUrl);
+  activeVoiceUrl=URL.createObjectURL(file);
+  const player=document.createElement("audio");player.controls=true;player.autoplay=true;player.src=activeVoiceUrl;
+  const card=play.closest(".card"),old=card.querySelector("[data-voice-player]");if(old)old.remove();
+  const area=document.createElement("div");area.dataset.voicePlayer="1";area.appendChild(player);play.parentNode.after(area);
+ }catch(err){alert("音声の操作に失敗しました。iPhoneの空き容量やブラウザの保存設定を確認してね")}
+}
 let visibleLimit=10;
-function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
+function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
-$("results").addEventListener("click",e=>{if(e.target.closest("#loadMoreEntries")){visibleLimit+=10;render()}});$("isanOnly").addEventListener("click",()=>{isanOnly=!isanOnly;$("isanOnly").classList.toggle("active",isanOnly);render()});document.querySelectorAll("[data-category]").forEach(b=>b.addEventListener("click",()=>{$("q").value=b.dataset.category;render()}));
+$("results").addEventListener("click",e=>{if(e.target.closest("[data-voice-save],[data-voice-play],[data-voice-delete]")){handleVoiceAction(e);return}if(e.target.closest("#loadMoreEntries")){visibleLimit+=10;render()}});$("isanOnly").addEventListener("click",()=>{isanOnly=!isanOnly;$("isanOnly").classList.toggle("active",isanOnly);render()});document.querySelectorAll("[data-category]").forEach(b=>b.addEventListener("click",()=>{$("q").value=b.dataset.category;render()}));
 $("loverExamples").addEventListener("click",()=>{$("q").value="愛情・大切なもの";showTab("search");render()});
 $("results").addEventListener("click",e=>{
  const replyButton=e.target.closest("[data-reply-copy]"),noteButton=e.target.closest("[data-google-save]");
@@ -243,7 +262,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=35;
+const APP_VERSION=36;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
