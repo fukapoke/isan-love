@@ -5,7 +5,8 @@ const store=(key,data)=>{try{localStorage.setItem(key,JSON.stringify(data));retu
 const ownKey="isanlove_entries_v1",pendingKey="isanlove_fon_pending_v1";
 let own=get(ownKey,[]),pending=get(pendingKey,[]),bundled=Array.isArray(window.ISAN_LOVE_600)?window.ISAN_LOVE_600:[];
 const basics=[["会いたいよ","คิดฮอดเด้อ","キット・ホート・ドー","恋愛"],["愛してるよ","ฮักเจ้าเด้อ","ハック・ジャオ・ドー","恋愛"],["大丈夫だよ","บ่เป็นหยัง","ボー・ペン・ニャン","気遣い"],["ご飯食べた？","กินข้าวแล้วบ่?","ギン・カーオ・レーオ・ボー？","食事"]].map((x,i)=>({id:"basic"+i,ja:x[0],th:x[1],ka:x[2],cat:x[3]}));
-const all=()=>[...basics,...bundled,...own];
+const callPhrases=[["これはどういう意味？","คำนี้แปลว่าอะไร","カム・ニー・プレー・ワー・アライ"],["もう一回言ってくれる？","พูดอีกครั้งได้ไหม","プート・イーク・クラン・ダイ・マイ"],["ゆっくり話してね","พูดช้า ๆ หน่อย","プート・チャー・チャー・ノイ"],["発音はこれで合ってる？","ผมออกเสียงถูกไหม","ポム・オーク・シアン・トゥーク・マイ"],["イサーン語では何て言うの？","ภาษาอีสานพูดว่าอะไร","パーサー・イーサーン・プート・ワー・アライ"],["分かったよ！","เข้าใจแล้ว","カオ・ジャイ・レーオ"],["文字で送ってくれる？","พิมพ์ส่งมาให้หน่อยได้ไหม","ピム・ソン・マー・ハイ・ノイ・ダイ・マイ"],["日本語で意味を調べてもいい？","ขอหาความหมายเป็นภาษาญี่ปุ่นก่อนได้ไหม","コー・ハー・クワームマーイ・ペン・パーサー・イープン・ゴーン・ダイ・マイ"],["この言葉を辞書に保存してもいい？","ขอบันทึกคำนี้ไว้ในพจนานุกรมได้ไหม","コー・バントゥック・カム・ニー・ワイ・ナイ・ポッチャナーヌクロム・ダイ・マイ"],["今日は何の言葉を教えてくれる？","วันนี้จะสอนคำว่าอะไร","ワンニー・ジャ・ソーン・カム・ワー・アライ"]].map((x,i)=>({id:"call"+i,ja:x[0],th:x[1],ka:x[2],cat:"電話で確認"}));
+const all=()=>[...basics,...callPhrases,...bundled,...own];
 const normal=s=>String(s||"").replace(/[\s\u200b.,!?！？。、「」]/g,"").toLowerCase();
 const known={"ฉันคิดถึงคุณนะคะ":{ja:"あなたが恋しいです／会いたいな",ka:"チャン・キットトゥン・クン・ナ・カ"},"คิดถึงนะ":{ja:"会いたいよ／恋しいよ",ka:"キットトゥン・ナ"}};
 function showTab(tab){document.querySelectorAll("main section").forEach(x=>x.classList.toggle("hide",x.id!==tab));document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab))}
