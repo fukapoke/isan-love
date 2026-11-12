@@ -176,6 +176,52 @@ if($("sceneLessons")){$("sceneLessons").addEventListener("click",e=>{
  if(!found){const next={...x,id:"ownScene"+Date.now(),cat:"💜Fon🩷",savedDate:localDay()};if(!store(ownKey,[...own,next]))return;own.push(next);found=next}
  $("q").value=found.th;showTab("search");render();alert("辞書に準備したよ。カードを開いてFonの音声を選んでね。まだ音声は付いていないよ。")
 });renderScenes()}
+
+const practiceKey="isanlove_practice_v1";
+let practiceStats=(()=>{try{return JSON.parse(localStorage.getItem(practiceKey))||{}}catch{return {}}})();
+let practiceMode="listen",practiceScene="all",practiceCurrent=null,practiceReveal=false,practiceQueue=[],practiceDone=0;
+const practiceDay=()=>new Date().toLocaleDateString("sv-SE");
+const practicePool=()=>[...sceneLessons,...own.filter(x=>x.th&&x.ja)].filter(x=>practiceScene==="all"||x.cat===practiceScene);
+function practiceDue(x){const st=practiceStats[x.th];return !st||!st.next||st.next<=practiceDay()}
+function practicePick(){const pool=practicePool();if(!pool.length)return null;const due=pool.filter(practiceDue);const choices=due.length?due:pool;return choices[Math.floor(Math.random()*choices.length)]}
+function practiceSpeak(text,rate=0.85){
+ if(!("speechSynthesis" in window)){alert("この端末では読み上げが使えないよ");return}
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="th-TH";u.rate=rate;
+ const voices=speechSynthesis.getVoices();const v=voices.find(x=>x.lang.toLowerCase().startsWith("th"));if(v)u.voice=v;
+ speechSynthesis.speak(u);
+}
+function practiceRender(){
+ const root=$("practiceCard");if(!root)return;
+ if(!practiceCurrent){root.innerHTML='<p>練習できる言葉がありません。</p>';return}
+ const x=practiceCurrent;
+ const isListen=practiceMode==="listen";
+ root.innerHTML='<small>'+esc(x.cat)+' · '+(isListen?"🎧 聞き取り":"🗣️ 発話")+'</small><h3>'+(isListen?"音声を聞いて意味を考えよう":"この日本語をタイ語・イサーン語で言ってみよう")+'</h3>'+
+ (isListen?'<p class="note">タイ文字は答えを見るまで隠しています。</p>':'<p style="font-size:22px;font-weight:bold">'+esc(x.ja)+'</p>')+
+ '<div class="row"><button data-practice-play>🔊 '+(isListen?"音声を聞く":"お手本を聞く")+'</button><button data-practice-slow>🐢 ゆっくり</button></div>'+
+ (!isListen?'<p class="note">まず自分の声で言ってみてから答えを見よう。録音や音声認識による自動採点はまだありません。</p>':'')+
+ (practiceReveal?'<div class="fon-details"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><p class="note">音声は端末の標準タイ語読み上げ。イサーン語の発音と異なる場合があります。</p></div><div class="row"><button data-practice-grade="again">🔁 まだ覚えてない</button><button data-practice-grade="good">✓ 覚えた</button></div>':'<button class="primary" style="width:100%;margin-top:12px" data-practice-reveal>👀 答えを見る</button>')+
+ '<p class="note">今回の練習：'+practiceDone+'問 · 記録はこの端末に保存</p>';
+}
+function practiceNext(){practiceCurrent=practicePick();practiceReveal=false;practiceRender()}
+if($("practiceCard")){
+ const selector=$("practiceScene");selector.innerHTML='<option value="all">すべてのシーン</option>'+[...new Set(sceneLessons.map(x=>x.cat))].map(g=>'<option value="'+esc(g)+'">'+esc(g)+'</option>').join("");
+ selector.addEventListener("change",()=>{practiceScene=selector.value;practiceNext()});
+ $("practiceMode").addEventListener("change",()=>{practiceMode=$("practiceMode").value;practiceNext()});
+ $("practiceCard").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b||!practiceCurrent)return;
+  if(b.hasAttribute("data-practice-play")){practiceSpeak(practiceCurrent.th);return}
+  if(b.hasAttribute("data-practice-slow")){practiceSpeak(practiceCurrent.th,0.65);return}
+  if(b.hasAttribute("data-practice-reveal")){practiceReveal=true;practiceRender();return}
+  if(b.hasAttribute("data-practice-grade")){
+   const grade=b.dataset.practiceGrade,prev=practiceStats[practiceCurrent.th]||{level:0},level=grade==="good"?Math.min((prev.level||0)+1,5):0;
+   const date=new Date();date.setDate(date.getDate()+([1,2,4,7,14,30][level]));
+   practiceStats[practiceCurrent.th]={level,next:date.toLocaleDateString("sv-SE"),last:practiceDay(),result:grade};
+   try{localStorage.setItem(practiceKey,JSON.stringify(practiceStats))}catch{alert("復習履歴を保存できませんでした")}
+   practiceDone++;practiceNext();
+  }
+ });
+ practiceNext();
+}
 let visibleLimit=10;
 function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
@@ -304,7 +350,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=38;
+const APP_VERSION=39;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
