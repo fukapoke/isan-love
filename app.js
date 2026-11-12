@@ -91,8 +91,36 @@ try{
 
 renderPending();
 render();load();
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=22").catch(()=>{});
+// Keep the home-screen URL stable. Only app assets update; local dictionary keys remain unchanged.
+const APP_VERSION=23;
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("./sw.js").then(reg=>{
+   reg.update().catch(()=>{});
+   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!document.hidden)checkUpdate()});
+ }).catch(()=>{});
+}
 let checkingUpdate=false;
-async function checkUpdate(){if(checkingUpdate||!navigator.onLine)return;checkingUpdate=true;try{const r=await fetch("./index.html?check="+Date.now(),{cache:"no-store"});if(!r.ok)return;const html=await r.text(),m=html.match(/app\\.js\\?v=(\\d+)/);if(m&&Number(m[1])>22){const notice=$("updateNotice");if(notice){notice.hidden=false;notice.textContent="新しいバージョンがあります。ここを押して更新";notice.onclick=()=>location.reload()}}}catch{}finally{checkingUpdate=false}}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});window.addEventListener("focus",checkUpdate);
+async function checkUpdate(){
+ if(checkingUpdate||!navigator.onLine||document.hidden)return;
+ checkingUpdate=true;
+ try{
+  const response=await fetch("./index.html?version-check="+Date.now(),{cache:"no-store"});
+  if(!response.ok)return;
+  const html=await response.text();
+  const match=html.match(/app[.]js[?]v=([0-9]+)/);
+  if(!match)return;
+  const remote=Number(match[1]);
+  if(remote<=APP_VERSION)return;
+  const key="isanlove_last_reload_version";
+  if(sessionStorage.getItem(key)===String(remote))return;
+  sessionStorage.setItem(key,String(remote));
+  const url=new URL(location.href);
+  url.searchParams.set("rev",String(remote));
+  location.replace(url.href);
+ }catch(e){}finally{checkingUpdate=false}
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
+window.addEventListener("focus",checkUpdate);
+window.addEventListener("pageshow",checkUpdate);
+checkUpdate();
 })();
