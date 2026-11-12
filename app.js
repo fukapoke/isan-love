@@ -92,32 +92,43 @@ try{
 
 renderPending();
 render();load();
-// Data is stored separately in localStorage and is never reset by app updates.
-const APP_VERSION=26;
+// Updating code never clears the private Fon dictionary in localStorage.
+const APP_VERSION=27;
+const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
-async function checkUpdate(){
- if(updateBusy||!navigator.onLine||document.hidden)return;
+async function checkUpdate(manual=false){
+ if(updateBusy)return;
+ if(!navigator.onLine){if(manual)updateStatus.textContent="オフラインです。通信を確認してね。";return}
  updateBusy=true;
+ if(manual){updateButton.disabled=true;updateStatus.textContent="最新版を確認中…"}
  try{
-  const response=await fetch("./index.html?update_check="+Date.now(),{cache:"no-store"});
-  if(!response.ok)return;
+  if("serviceWorker" in navigator){
+   const reg=await navigator.serviceWorker.getRegistration();
+   if(reg)await reg.update();
+  }
+  const response=await fetch("./index.html?check="+Date.now(),{cache:"no-store"});
+  if(!response.ok)throw new Error("サーバーに接続できません");
   const match=(await response.text()).match(/app[.]js[?]v=([0-9]+)/);
-  if(!match||Number(match[1])<=APP_VERSION)return;
-  const version=match[1];
-  if(sessionStorage.getItem("isanlove_reload_target")===version)return;
-  sessionStorage.setItem("isanlove_reload_target",version);
-  const url=new URL(location.href);
-  url.searchParams.set("app_update",version);
-  location.replace(url.href);
- }catch(e){}finally{updateBusy=false}
+  if(!match)throw new Error("バージョンを確認できません");
+  const remote=Number(match[1]);
+  if(remote>APP_VERSION){
+   updateStatus.textContent="v"+remote+" が見つかりました。更新します…";
+   const url=new URL(location.href);
+   url.searchParams.set("app_update",String(remote));
+   // Refresh app assets, not the user's saved localStorage.
+   location.replace(url.href);
+   return;
+  }
+  if(manual){
+   updateStatus.textContent="確認結果：v"+remote+"。"+(remote===APP_VERSION?"最新版です。":"公開側の更新待ちです。");
+  }
+ }catch(e){if(manual)updateStatus.textContent="確認できませんでした："+e.message}
+ finally{updateBusy=false;updateButton.disabled=false}
 }
+updateButton.addEventListener("click",()=>checkUpdate(true));
 if("serviceWorker" in navigator){
- navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>{
-  reg.update().catch(()=>{});
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden){reg.update().catch(()=>{});checkUpdate()}});
-  window.addEventListener("focus",()=>{reg.update().catch(()=>{});checkUpdate()});
- }).catch(()=>{});
+ navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>reg.update()).catch(()=>{});
 }
-window.addEventListener("pageshow",checkUpdate);
-checkUpdate();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
+window.addEventListener("pageshow",()=>checkUpdate());
 })();
