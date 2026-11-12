@@ -52,7 +52,7 @@ const localDay=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMo
 const validDay=s=>typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(new Date(s+"T12:00:00").getTime())&&new Date(s+"T12:00:00").getFullYear()===Number(s.slice(0,4))&&new Date(s+"T12:00:00").getMonth()+1===Number(s.slice(5,7))&&new Date(s+"T12:00:00").getDate()===Number(s.slice(8,10));
 const entryDay=x=>validDay(x.savedDate)?x.savedDate:(typeof x.createdAt==="string"&&validDay(x.createdAt.slice(0,10))?x.createdAt.slice(0,10):"");
 let calMonth=localDay().slice(0,7),calSelected=localDay();
-const fonEntries=()=>own.filter(x=>x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"));
+const fonEntries=()=>own;
 function setFonDate(id,date){
  if(!validDay(date)){alert("正しい年月日（例：2026-11-03）を入力してね");return}
  const next=own.map(x=>x.id===id?{...x,savedDate:date}:x);
@@ -127,7 +127,7 @@ $("translationAdopt").addEventListener("click",()=>{
  if(previous&&previous.ja===ja&&previous.ka===ka&&languageOf(previous)===lang){status.textContent="💜Fon🩷 辞書に登録済みだよ";return}
  if(!confirm("答え合わせした内容を 💜Fon🩷 辞書に保存する？"))return;
  const next=own.filter(x=>!((x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"))&&normal(x.th)===normal(th)));
- next.push({id:previous?.id||"fon"+Date.now(),th,ja,ka,lang,cat:"💜Fon🩷",savedDate:previous?entryDay(previous)||localDay():localDay()});
+ next.push({id:previous?.id||"fon"+Date.now(),th,ja,ka,lang,cat:"💜Fon🩷",savedDate:previous?entryDay(previous):localDay()});
  if(!store(ownKey,next))return;
  own=next;
  const remaining=pending.filter(x=>normal(x.th)!==normal(th));
@@ -180,7 +180,7 @@ function registerFonData(){
   if(!confirm("次の内容で辞書に登録する？\n\n"+data.th+"\n"+data.ja+"\n"+data.ka+"\n分類："+langName+"\n\n同じFonの文章がある場合は更新します。"))return;
   const next=own.filter(v=>!((v.cat==="💜Fon🩷"||String(v.cat||"").startsWith("Fon辞書"))&&normal(v.th)===normal(data.th)));
   const previous=own.find(x=>(x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"))&&normal(x.th)===normal(data.th));
-  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",savedDate:previous?entryDay(previous)||localDay():localDay()});
+  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",savedDate:previous?entryDay(previous):localDay()});
   if(!store(ownKey,next))return;
   own=next;pending=pending.filter(x=>normal(x.th)!==normal(data.th));store(pendingKey,pending);
   $("msgIn").value=data.th;renderPending();render();findMessage();
