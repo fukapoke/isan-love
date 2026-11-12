@@ -30,8 +30,24 @@ const specialReplies={
  ["普段どおり","ดีใจจังครับ เรามาค่อย ๆ เรียนรู้กันนะ 😊","嬉しいな。少しずつお互いを知っていこうね😊","ディー ジャイ ジャン クラップ ラオ マー コイ コイ リアン ルー ガン ナ"]
  ]
 };
+const homeQuestionReplies=[
+ ["🏠 帰宅済み・優しい","ถึงบ้านแล้วครับ ขอบคุณที่เป็นห่วงนะ ❤️","もう家に着いたよ。心配してくれてありがとう❤️","トゥン・バーン・レーオ・クラップ コープクン・ティー・ペンフアン・ナ"],
+ ["🏠 帰宅済み・甘い","ถึงบ้านแล้วครับ ตอนนี้คิดถึงคุณจังเลย ❤️","もう家に着いたよ。今すごくFonが恋しいよ❤️","トゥン・バーン・レーオ・クラップ トーンニー・キットゥン・クン・ジャン・ルーイ"],
+ ["🏠 帰宅済み・普段どおり","ใช่ครับ กลับถึงบ้านแล้ว 😊","うん、もう家に帰ったよ😊","チャイ・クラップ グラップ・トゥン・バーン・レーオ"],
+ ["🚗 まだ帰宅前・優しい","ยังไม่ถึงบ้านครับ ไม่ต้องห่วงนะ ❤️","まだ家に着いてないよ。心配しないでね❤️","ヤン・マイ・トゥン・バーン・クラップ マイ・トン・フアン・ナ"],
+ ["🚗 まだ帰宅前・甘い","ยังไม่ถึงบ้านครับ ถึงบ้านแล้วจะรีบทักหานะ คิดถึงคุณ ❤️","まだ帰ってないよ。着いたらすぐ連絡するね。Fonが恋しいよ❤️","ヤン・マイ・トゥン・バーン・クラップ トゥン・バーン・レーオ・ジャ・リープ・タック・ハー・ナ キットゥン・クン"],
+ ["🚗 まだ帰宅前・普段どおり","ยังไม่ถึงบ้านครับ 😊","まだ家に着いてないよ😊","ヤン・マイ・トゥン・バーン・クラップ"]
+];
+function isHomeQuestion(msg){return /กลับบ้านแล้วใช่ไหม|ถึงบ้านแล้วใช่ไหม|กลับถึงบ้านแล้วหรือยัง|ถึงบ้านหรือยัง/.test(normal(msg))}
+function renderHomeReplies(replies,id,attr){
+ return '<p class="note">今の状況に合う方を選んでね。</p><h3>🏠 もう家に帰った</h3>'+
+ replies.slice(0,3).map((v,i)=>'<div class="reply-card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p class="kana">'+esc(v[3])+'</p><p>'+esc(v[2])+'</p><button '+attr+'="'+esc(id)+'" data-reply-no="'+i+'">📋 この返信をコピー</button></div>').join("")+
+ '<h3>🚗 まだ家に帰っていない</h3>'+
+ replies.slice(3).map((v,i)=>'<div class="reply-card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p class="kana">'+esc(v[3])+'</p><p>'+esc(v[2])+'</p><button '+attr+'="'+esc(id)+'" data-reply-no="'+(i+3)+'">📋 この返信をコピー</button></div>').join("");
+}
 function availableReplies(x){
  // Question intent takes priority over generic keyword matches and old stored suggestions.
+ if(isHomeQuestion(String(x.th||"")))return homeQuestionReplies;
  if(isTiredQuestion(String(x.th||"")))return tiredQuestionReplies;
  if(Array.isArray(x.replies)&&x.replies.length)return x.replies;
  const special=specialReplies[String(x.th||"").trim()];
@@ -43,7 +59,7 @@ function availableReplies(x){
 function showFonExtras(x){
  const notes=googleNotes.filter(n=>normal(n.th)===normal(x.th));
  const replies=availableReplies(x);
- const replyHtml=replies.length?replies.map((v,i)=>'<div class="reply-card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p>'+esc(v[2])+'</p>'+(v[3]?'<p class="kana">'+esc(v[3])+'</p>':"")+'<button data-reply-copy="'+esc(x.id)+'" data-reply-no="'+i+'">📋 この返信をコピー</button></div>').join(""):'<p class="note">この文章に合う返信はまだ未登録だよ。ChatGPTで確認してね。</p>';
+ const replyHtml=isHomeQuestion(x.th)?renderHomeReplies(replies,x.id,"data-reply-copy"):replies.length?replies.map((v,i)=>'<div class="reply-card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p>'+esc(v[2])+'</p>'+(v[3]?'<p class="kana">'+esc(v[3])+'</p>':"")+'<button data-reply-copy="'+esc(x.id)+'" data-reply-no="'+i+'">📋 この返信をコピー</button></div>').join(""):'<p class="note">この文章に合う返信はまだ未登録だよ。ChatGPTで確認してね。</p>';
  const notesHtml=notes.map(n=>'<div class="reply-card"><small>'+esc(n.date||"")+'</small><p><b>検索・入力した文章：</b>'+esc(n.query)+'</p><p><b>Googleの結果：</b>'+esc(n.result)+'</p></div>').join("");
  const isFon=x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書");
  return isFon?'<details class="fon-details"><summary>💌 返信候補・Googleの調べもの</summary><h3>♡ 返信候補</h3>'+replyHtml+'<p class="note">返信は定型候補です。意味と文脈を確認して送ってね。</p><h3>🔎 Googleで調べた記録</h3>'+(notesHtml||'<p class="note">まだ調べた記録はありません。</p>')+'<label>Googleで入力・検索した文章<textarea data-google-query="'+esc(x.id)+'" rows="2">'+esc(x.th)+'</textarea></label><label>Google翻訳・検索の結果（コピーして貼り付け）<textarea data-google-result="'+esc(x.id)+'" rows="3" placeholder="調べた日本語訳やメモを貼り付けてね"></textarea></label><button data-google-save="'+esc(x.id)+'">💾 Googleの調べものを保存</button></details>':"";
@@ -128,7 +144,7 @@ function renderTiredQuestionReplies(box){
  box.innerHTML="<b>♡ Fonの質問への返信3種類</b><p class='note'>「疲れた？」への返事です。自分の体調に合うものを選んでね。</p>"+tiredQuestionReplies.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p class="kana">'+esc(v[3])+'</p><p>'+esc(v[2])+'</p><button data-tired-reply="'+i+'">📋 この返信をコピー</button></div>').join("");
  box.querySelectorAll("[data-tired-reply]").forEach(b=>b.addEventListener("click",async()=>{const v=tiredQuestionReplies[Number(b.dataset.tiredReply)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}))
 }
-function showReplies(msg,meaning){const box=$("replySuggestions");if(isTiredQuestion(msg)){renderTiredQuestionReplies(box);return}const hay=normal(msg+" "+meaning);const match=replySets.find(group=>group.terms.some(t=>hay.includes(normal(t))));if(!match){box.style.display="block";box.innerHTML="<b>♡ 返信候補</b><p class='note'>この文章に合う返信はまだ登録されていません。意味を確認してから、日本語の返信を作ってね。無関係な返信を自動表示しないようにしています。</p>";return}box.style.display="block";box.innerHTML="<b>♡ おすすめの返信3種類</b><p class='note'>登録済みの定型返信です。相手の文脈に合うか確認して送ってね。</p>"+match.items.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p>'+esc(v[2])+'</p><button data-reply-index="'+i+'">この返信をコピー</button></div>').join("");box.querySelectorAll("[data-reply-index]").forEach(b=>b.addEventListener("click",async()=>{const v=match.items[Number(b.dataset.replyIndex)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}))}
+function showReplies(msg,meaning){const box=$("replySuggestions");if(isHomeQuestion(msg)){box.style.display="block";box.innerHTML="<b>♡ 帰宅状況に合わせた返信</b>"+renderHomeReplies(homeQuestionReplies,"home","data-home-reply");box.querySelectorAll("[data-home-reply]").forEach(b=>b.addEventListener("click",async()=>{const v=homeQuestionReplies[Number(b.dataset.replyNo)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}));return}if(isTiredQuestion(msg)){renderTiredQuestionReplies(box);return}const hay=normal(msg+" "+meaning);const match=replySets.find(group=>group.terms.some(t=>hay.includes(normal(t))));if(!match){box.style.display="block";box.innerHTML="<b>♡ 返信候補</b><p class='note'>この文章に合う返信はまだ登録されていません。意味を確認してから、日本語の返信を作ってね。無関係な返信を自動表示しないようにしています。</p>";return}box.style.display="block";box.innerHTML="<b>♡ おすすめの返信3種類</b><p class='note'>登録済みの定型返信です。相手の文脈に合うか確認して送ってね。</p>"+match.items.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p>'+esc(v[2])+'</p><button data-reply-index="'+i+'">この返信をコピー</button></div>').join("");box.querySelectorAll("[data-reply-index]").forEach(b=>b.addEventListener("click",async()=>{const v=match.items[Number(b.dataset.replyIndex)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}))}
 function findMessage(){const msg=$("msgIn").value.trim(),out=$("translationResult"),save=$("translationSave");$("translationStatus").textContent="";if(!msg){out.style.display="none";save.style.display="none";$("replySuggestions").style.display="none";return}out.style.display="block";save.style.display="block";const n=normal(msg);const fon=own.filter(x=>(String(x.cat||"").startsWith("Fon辞書")||x.cat==="💜Fon🩷")&&normal(x.th)===n);const exact=fon.length?fon:all().filter(x=>normal(x.th)===n);const k=known[msg]||known[n];let candidate=null;if(fon.length||exact.length){candidate=exact[0];out.innerHTML="<b>"+(fon.length?"♡ Fon辞書で確認済み":"登録例文と一致")+"</b><div class='thai'>"+esc(msg)+"</div><p>"+esc(candidate.ja)+"</p><p class='kana'>"+esc(candidate.ka||"")+"</p>"}else if(k){candidate=k;out.innerHTML="<b>日本語訳の候補</b><div class='thai'>"+esc(msg)+"</div><p>"+esc(k.ja)+"</p><p class='kana'>"+esc(k.ka)+"</p><small>文脈によって意味は変わります。</small>"}else{const close=all().map(x=>({x,t:normal(x.th)})).filter(v=>v.t.length>=4&&(n.includes(v.t)||v.t.includes(n))).slice(0,4);out.innerHTML=close.length?"<b>似た表現（全文訳ではありません）</b>"+close.map(v=>"<p>"+esc(v.x.th)+"： "+esc(v.x.ja)+"</p>").join("")+"<p class='note'>下の日本語訳は空欄です。意味を確認してから保存してください。</p>":"<b>まだ辞書にない文章です</b><p>Google翻訳で確認し、下に正しい日本語訳を入力すると次回から自動表示できます。</p>"}$("translationJa").value=candidate?candidate.ja:"";$("translationKana").value=candidate?candidate.ka||"":"";$("translationLang").value=fon.length?languageOf(fon[0]):"unverified";showReplies(msg,candidate?candidate.ja:"")}
 $("msgIn").addEventListener("input",findMessage);
 $("translationAdopt").addEventListener("click",()=>{
@@ -213,7 +229,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=32;
+const APP_VERSION=33;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
