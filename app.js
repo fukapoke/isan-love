@@ -145,6 +145,37 @@ if(loveBtn)loveBtn.addEventListener("click",()=>{
  if(!additions.length){alert("ふたりの会話は登録済みだよ 💜 音声をそれぞれのカードに付けてね");$("q").value="Fon：";showTab("search");render();return}
  const next=[...own,...additions];if(store(ownKey,next)){own=next;$("q").value="Fon：";showTab("search");render();alert("ふたりの会話を保存したよ 💜 2つのカードを開いて、それぞれの音声を選んでね")}
 });
+const sceneLessons=[
+ ["💜 恋愛","会いたいよ","คิดฮอดเจ้า","キット・ホート・ジャオ"],
+ ["💜 恋愛","愛してるよ","ข้อยฮักเจ้า","コイ・ハック・ジャオ"],
+ ["💜 恋愛","私のこと愛してる？","เจ้าฮักข้อยบ่?","ジャオ・ハック・コイ・ボー？"],
+ ["🌅 朝・夜","おはよう","สวัสดีตอนเช้า","サワッディー・トーン・チャオ"],
+ ["🌅 朝・夜","おやすみ","ฝันดีเด้อ","ファン・ディー・ドー"],
+ ["🌅 朝・夜","よく眠れた？","นอนหลับสบายบ่?","ノーン・ラップ・サバーイ・ボー？"],
+ ["🍚 食事","ご飯食べた？","กินข้าวแล้วบ่?","ギン・カーオ・レーオ・ボー？"],
+ ["🍚 食事","おいしい？","แซ่บบ่?","セープ・ボー？"],
+ ["🍚 食事","お腹すいた","หิวข้าวแล้ว","ヒウ・カーオ・レーオ"],
+ ["🏭 仕事","疲れた？","เมื่อยบ่?","ムアイ・ボー？"],
+ ["🏭 仕事","無理しないでね","อย่าฝืนเด้อ","ヤー・フーン・ドー"],
+ ["🏭 仕事","頑張ってね","สู้ ๆ เด้อ","スー・スー・ドー"],
+ ["🚗 帰宅・移動","気をつけてね","ระวังโตเด้อ","ラワン・トー・ドー"],
+ ["🚗 帰宅・移動","もう帰るよ","สิเมือแล้วเด้อ","シ・ムア・レーオ・ドー"],
+ ["🚗 帰宅・移動","着いたよ","ฮอดแล้วเด้อ","ホート・レーオ・ドー"],
+ ["💬 LINE・電話","何してるの？","เฮ็ดหยังอยู่?","ヘット・ニャン・ユー？"],
+ ["💬 LINE・電話","もう一回言って","เว้าอีกเทื่อได้บ่?","ワオ・イーク・トゥア・ダイ・ボー？"],
+ ["💬 LINE・電話","ゆっくり話してね","เว้าช้า ๆ แน่เด้อ","ワオ・チャー・チャー・ネー・ドー"]
+].map((x,i)=>({id:"sceneLesson"+i,cat:x[0],ja:x[1],th:x[2],ka:x[3],lang:/^(💜|🍚|🏭|🚗|💬)/.test(x[0])?"unverified":"unverified"}));
+function renderScenes(){
+ const target=$("sceneLessons");if(!target)return;
+ const groups=[...new Set(sceneLessons.map(x=>x.cat))];
+ target.innerHTML=groups.map(g=>'<details class="card"><summary><b>'+esc(g)+'</b> <small>('+sceneLessons.filter(x=>x.cat===g).length+'語)</small></summary>'+sceneLessons.filter(x=>x.cat===g).map(x=>'<div class="reply-card"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><button data-scene-add="'+esc(x.id)+'">💾 辞書に追加して音声を付ける</button></div>').join("")+'</details>').join("");
+}
+if($("sceneLessons")){$("sceneLessons").addEventListener("click",e=>{
+ const b=e.target.closest("[data-scene-add]");if(!b)return;const x=sceneLessons.find(v=>v.id===b.dataset.sceneAdd);if(!x)return;
+ let found=own.find(v=>v.th===x.th);
+ if(!found){const next={...x,id:"ownScene"+Date.now(),cat:"💜Fon🩷",savedDate:localDay()};if(!store(ownKey,[...own,next]))return;own.push(next);found=next}
+ $("q").value=found.th;showTab("search");render();alert("辞書に準備したよ。カードを開いてFonの音声を選んでね。まだ音声は付いていないよ。")
+});renderScenes()}
 let visibleLimit=10;
 function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
@@ -273,7 +304,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=37;
+const APP_VERSION=38;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
