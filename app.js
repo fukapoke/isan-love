@@ -177,11 +177,12 @@ if($("sceneLessons")){$("sceneLessons").addEventListener("click",e=>{
  $("q").value=found.th;showTab("search");render();alert("辞書に準備したよ。カードを開いてFonの音声を選んでね。まだ音声は付いていないよ。")
 });renderScenes()}
 
+const fonPriorityLessons=[["💜 Fonに愛を伝える","愛してるよ","ฮักเจ้าเด้อ","ハック・ジャオ・ドー"],["💜 Fonに愛を伝える","すごく愛してるよ","ฮักเจ้าหลาย ๆ เด้อ","ハック・ジャオ・ラーイ・ラーイ・ドー"],["💜 Fonに愛を伝える","会いたいよ","คิดฮอดเจ้าเด้อ","キット・ホート・ジャオ・ドー"],["💜 Fonに愛を伝える","一緒にいたいよ","อยากอยู่กับเจ้า","ヤーク・ユー・ガップ・ジャオ"],["💜 Fonに愛を伝える","大切にするよ","สิดูแลเจ้าให้ดี","シ・ドゥーレー・ジャオ・ハイ・ディー"],["💜 Fonに愛を伝える","いつも想ってるよ","คิดฮอดเจ้าอยู่เสมอ","キット・ホート・ジャオ・ユー・サムー"],["🌷 Fonを気づかう","疲れた？","เมื่อยบ่?","ムアイ・ボー？"],["🌷 Fonを気づかう","無理しないでね","อย่าฝืนเด้อ","ヤー・フーン・ドー"],["🌷 Fonを気づかう","ゆっくり休んでね","พักผ่อนหลาย ๆ เด้อ","パック・ポーン・ラーイ・ラーイ・ドー"],["🌷 Fonを気づかう","ご飯食べた？","กินข้าวแล้วบ่?","ギン・カーオ・レーオ・ボー？"],["🌷 Fonを気づかう","大丈夫？","เป็นหยังบ่?","ペン・ニャン・ボー？"],["🌷 Fonを気づかう","気をつけてね","ระวังโตเด้อ","ラワン・トー・ドー"]].map((x,i)=>({id:"fonPriority"+i,cat:x[0],ja:x[1],th:x[2],ka:x[3],lang:"unverified"}));
 const practiceKey="isanlove_practice_v1";
 let practiceStats=(()=>{try{return JSON.parse(localStorage.getItem(practiceKey))||{}}catch{return {}}})();
-let practiceMode="listen",practiceScene="all",practiceCurrent=null,practiceReveal=false,practiceQueue=[],practiceDone=0;
+let practiceMode="listen",practiceScene="💜 Fonに愛を伝える",practiceCurrent=null,practiceReveal=false,practiceQueue=[],practiceDone=0;
 const practiceDay=()=>new Date().toLocaleDateString("sv-SE");
-const practicePool=()=>[...sceneLessons,...own.filter(x=>x.th&&x.ja)].filter(x=>practiceScene==="all"||x.cat===practiceScene);
+const practicePool=()=>[...fonPriorityLessons,...sceneLessons,...own.filter(x=>x.th&&x.ja)].filter(x=>practiceScene==="all"||x.cat===practiceScene);
 function practiceDue(x){const st=practiceStats[x.th];return !st||!st.next||st.next<=practiceDay()}
 function practicePick(){const pool=practicePool();if(!pool.length)return null;const due=pool.filter(practiceDue);const choices=due.length?due:pool;return choices[Math.floor(Math.random()*choices.length)]}
 function practiceSpeak(text,rate=0.85){
@@ -205,7 +206,7 @@ function practiceRender(){
 function practiceNext(){practiceCurrent=practicePick();practiceReveal=false;practiceRender()}
 if($("practiceCard")){
  const selector=$("practiceScene");selector.innerHTML='<option value="all">すべてのシーン</option>'+[...new Set(sceneLessons.map(x=>x.cat))].map(g=>'<option value="'+esc(g)+'">'+esc(g)+'</option>').join("");
- selector.addEventListener("change",()=>{practiceScene=selector.value;practiceNext()});
+ selector.value=practiceScene;selector.addEventListener("change",()=>{practiceScene=selector.value;practiceNext()});
  $("practiceMode").addEventListener("change",()=>{practiceMode=$("practiceMode").value;practiceNext()});
  $("practiceCard").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b||!practiceCurrent)return;
@@ -350,7 +351,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=39;
+const APP_VERSION=40;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
