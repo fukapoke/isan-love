@@ -42,10 +42,54 @@ $("import").addEventListener("change",async e=>{const file=e.target.files[0];if(
 function renderPending(){const el=$("pendingList");$("pendingCount").textContent="("+pending.length+"件)";el.innerHTML=pending.map((x,i)=>'<article class="card"><small>未確認</small><div class="thai">'+esc(x.th)+'</div><div class="row"><button data-review="'+i+'">つーちゃんと答え合わせ</button><button data-confirm="'+i+'">辞書に反映</button><button data-remove="'+i+'">削除</button></div></article>').join("")||"<p class='note'>まだ登録待ちの言葉はありません。</p>"}
 $("pendingSave").addEventListener("click",()=>{const th=$("msgIn").value.trim();if(!th){$("pendingStatus").textContent="タイ語・イサーン語を貼り付けてね";return}if(pending.some(x=>normal(x.th)===normal(th))){$("pendingStatus").textContent="同じ文章はすでに登録待ちです";return}pending.push({th,createdAt:new Date().toISOString()});if(store(pendingKey,pending)){$("pendingStatus").textContent="答え合わせ待ちに保存しました";renderPending()}});
 $("pendingList").addEventListener("click",e=>{const b=e.target.closest("[data-review],[data-confirm],[data-remove]");if(!b)return;const i=Number(b.dataset.review??b.dataset.confirm??b.dataset.remove),x=pending[i];if(!x)return;if(b.hasAttribute("data-review")){$("msgIn").value=x.th;showTab("translate");findMessage();$("msgIn").scrollIntoView({block:"start",behavior:"smooth"});return}if(b.hasAttribute("data-remove")){if(!confirm("この未確認の言葉を削除しますか？"))return;pending.splice(i,1);store(pendingKey,pending);renderPending();return}const ja=prompt("つーちゃんと確認した日本語の意味を入力",x.ja||"");if(ja===null)return;if(!ja.trim()){alert("答え合わせ後の日本語訳を入力してください");return}const ka=prompt("確認した読み方（任意・空欄でOK）",x.ka||"");if(ka===null)return;const kind=prompt("言葉の種類：1=イサーン語（確認済み） 2=標準タイ語 3=未判定","3");if(kind===null)return;if(!["1","2","3"].includes(kind)){alert("1、2、3から選んでね");return}const lang=kind==="1"?"isan":kind==="2"?"thai":"unverified";if(!confirm("答え合わせ済みとして 💜Fon🩷 辞書に反映しますか？"))return;const next=own.filter(v=>!((v.cat==="💜Fon🩷"||String(v.cat||"").startsWith("Fon辞書"))&&normal(v.th)===normal(x.th)));next.push({id:"fon"+Date.now(),th:x.th,ja:ja.trim(),ka:ka.trim(),cat:"💜Fon🩷",lang});if(!store(ownKey,next))return;own=next;pending.splice(i,1);store(pendingKey,pending);renderPending();render();alert("💜Fon🩷 辞書に反映しました")});
+
+function parseFonData(raw){
+  const s=String(raw||"").trim();if(!s)throw Error("登録データを貼り付けてね");
+  let obj;
+  try{obj=JSON.parse(s)}catch{}
+  if(!obj){
+    const lines=s.split(/\r?\n/),fields={};
+    for(const line of lines){
+      const m=line.match(/^\s*(タイ語|タイ文字|原文|日本語|日本語訳|カタカナ|読み方|言語|分類)\s*[：:]\s*(.*?)\s*$/);
+      if(m)fields[m[1]]=m[2];
+    }
+    obj={th:fields["タイ語"]||fields["タイ文字"]||fields["原文"],ja:fields["日本語"]||fields["日本語訳"],ka:fields["カタカナ"]||fields["読み方"]||"",lang:fields["言語"]||fields["分類"]||"未判定"};
+  }
+  if(!obj||Array.isArray(obj)||typeof obj!=="object")throw Error("登録形式を確認してね");
+  const th=String(obj.th||"").trim(),ja=String(obj.ja||"").trim(),ka=String(obj.ka||"").trim(),rawLang=String(obj.lang||"未判定").trim().toLowerCase();
+  if(!th||!ja)throw Error("タイ語と日本語訳の両方が必要だよ");
+  if(!/[\u0E00-\u0E7F]/.test(th))throw Error("タイ文字が見つからないよ");
+  if(th.length>1000||ja.length>2000||ka.length>1000)throw Error("文章が長すぎるため登録できないよ");
+  const lang=["thai","標準タイ語","タイ語"].includes(rawLang)?"thai":["isan","イサーン語","イサン語"].includes(rawLang)?"isan":"unverified";
+  return {th,ja,ka,lang};
+}
+function registerFonData(){
+  const status=$("fonImportStatus");let data;
+  try{data=parseFonData($("fonImportText").value)}catch(e){status.textContent=e.message;return}
+  const langName=data.lang==="isan"?"イサーン語":data.lang==="thai"?"標準タイ語":"未判定";
+  if(!confirm("次の内容で辞書に登録する？\n\n"+data.th+"\n"+data.ja+"\n"+data.ka+"\n分類："+langName+"\n\n同じFonの文章がある場合は更新します。"))return;
+  const next=own.filter(v=>!((v.cat==="💜Fon🩷"||String(v.cat||"").startsWith("Fon辞書"))&&normal(v.th)===normal(data.th)));
+  next.push({id:"fon"+Date.now(),...data,cat:"💜Fon🩷"});
+  if(!store(ownKey,next))return;
+  own=next;pending=pending.filter(x=>normal(x.th)!==normal(data.th));store(pendingKey,pending);
+  $("msgIn").value=data.th;renderPending();render();findMessage();
+  status.textContent="💜 Fonの辞書に登録したよ！ 辞書タブの「💜Fon🩷」で確認できるよ。";
+}
+$("fonImportButton").addEventListener("click",registerFonData);
+try{
+ const hash=location.hash.startsWith("#fon=")?location.hash.slice(5):"";
+ if(hash){
+  const data=parseFonData(decodeURIComponent(hash));
+  $("fonImportText").value=JSON.stringify(data,null,2);
+  showTab("translate");$("fonImportStatus").textContent="つーちゃんの翻訳を読み込んだよ。内容を確認して登録してね。";
+  history.replaceState(null,"",location.pathname+location.search);
+ }
+}catch(e){$("fonImportStatus").textContent="共有された翻訳データを読み取れませんでした："+e.message}
+
 renderPending();
 render();load();
-if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=20").catch(()=>{});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js?v=21").catch(()=>{});
 let checkingUpdate=false;
-async function checkUpdate(){if(checkingUpdate||!navigator.onLine)return;checkingUpdate=true;try{const r=await fetch("./index.html?check="+Date.now(),{cache:"no-store"});if(!r.ok)return;const html=await r.text(),m=html.match(/app\\.js\\?v=(\\d+)/);if(m&&Number(m[1])>20){const notice=$("updateNotice");if(notice){notice.hidden=false;notice.textContent="新しいバージョンがあります。ここを押して更新";notice.onclick=()=>location.reload()}}}catch{}finally{checkingUpdate=false}}
+async function checkUpdate(){if(checkingUpdate||!navigator.onLine)return;checkingUpdate=true;try{const r=await fetch("./index.html?check="+Date.now(),{cache:"no-store"});if(!r.ok)return;const html=await r.text(),m=html.match(/app\\.js\\?v=(\\d+)/);if(m&&Number(m[1])>21){const notice=$("updateNotice");if(notice){notice.hidden=false;notice.textContent="新しいバージョンがあります。ここを押して更新";notice.onclick=()=>location.reload()}}}catch{}finally{checkingUpdate=false}}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});window.addEventListener("focus",checkUpdate);
 })();
