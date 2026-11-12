@@ -45,8 +45,20 @@ function renderHomeReplies(replies,id,attr){
  '<h3>🚗 まだ家に帰っていない</h3>'+
  replies.slice(3).map((v,i)=>'<div class="reply-card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p class="kana">'+esc(v[3])+'</p><p>'+esc(v[2])+'</p><button '+attr+'="'+esc(id)+'" data-reply-no="'+(i+3)+'">📋 この返信をコピー</button></div>').join("");
 }
+const scallopWorkReplies=[
+ ["✅ 500kgある","มีครับ พรุ่งนี้ที่โรงสดมีหอยเชลล์ 500 กิโลกรัมครับ","あるよ。明日、生処理場にホタテ500kgあるよ","ミー・クラップ プルンニー・ティー・ローンソット・ミー・ホーイチェーン・ハーローイ・ギロクラム・クラップ"],
+ ["❌ 500kgない","ไม่มีครับ พรุ่งนี้ที่โรงสดไม่มีหอยเชลล์ 500 กิโลกรัมครับ","ないよ。明日、生処理場にホタテ500kgはないよ","マイミー・クラップ プルンニー・ティー・ローンソット・マイミー・ホーイチェーン・ハーローイ・ギロクラム・クラップ"],
+ ["🔎 まだ未確認","ยังไม่แน่ใจครับ เดี๋ยวผมเช็กให้แล้วบอกนะ","まだ分からないよ。確認してから教えるね","ヤン・マイ・ネー・ジャイ・クラップ ディアオ・ポム・チェック・ハイ・レーオ・ボーク・ナ"]
+];
+function isScallopWorkQuestion(msg){const t=normal(msg);return t.includes("โรงสด")&&t.includes("หอยเชลล์")&&t.includes("500")&&/ไหม|มั้ย/.test(t)}
+function showScallopReplies(box){
+ box.style.display="block";
+ box.innerHTML="<b>♡ 仕事の質問への返信</b><p class='note'>実際の予定を確認して、当てはまる返信だけ送ってね。</p>"+scallopWorkReplies.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p class="kana">'+esc(v[3])+'</p><p>'+esc(v[2])+'</p><button data-scallop-reply="'+i+'">📋 この返信をコピー</button></div>').join("");
+ box.querySelectorAll("[data-scallop-reply]").forEach(b=>b.addEventListener("click",async()=>{const v=scallopWorkReplies[Number(b.dataset.scallopReply)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}));
+}
 function availableReplies(x){
  // Question intent takes priority over generic keyword matches and old stored suggestions.
+ if(isScallopWorkQuestion(String(x.th||"")))return scallopWorkReplies;
  if(isHomeQuestion(String(x.th||"")))return homeQuestionReplies;
  if(isTiredQuestion(String(x.th||"")))return tiredQuestionReplies;
  if(Array.isArray(x.replies)&&x.replies.length)return x.replies;
@@ -144,7 +156,7 @@ function renderTiredQuestionReplies(box){
  box.innerHTML="<b>♡ Fonの質問への返信3種類</b><p class='note'>「疲れた？」への返事です。自分の体調に合うものを選んでね。</p>"+tiredQuestionReplies.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p class="kana">'+esc(v[3])+'</p><p>'+esc(v[2])+'</p><button data-tired-reply="'+i+'">📋 この返信をコピー</button></div>').join("");
  box.querySelectorAll("[data-tired-reply]").forEach(b=>b.addEventListener("click",async()=>{const v=tiredQuestionReplies[Number(b.dataset.tiredReply)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}))
 }
-function showReplies(msg,meaning){const box=$("replySuggestions");if(isHomeQuestion(msg)){box.style.display="block";box.innerHTML="<b>♡ 帰宅状況に合わせた返信</b>"+renderHomeReplies(homeQuestionReplies,"home","data-home-reply");box.querySelectorAll("[data-home-reply]").forEach(b=>b.addEventListener("click",async()=>{const v=homeQuestionReplies[Number(b.dataset.replyNo)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}));return}if(isTiredQuestion(msg)){renderTiredQuestionReplies(box);return}const hay=normal(msg+" "+meaning);const match=replySets.find(group=>group.terms.some(t=>hay.includes(normal(t))));if(!match){box.style.display="block";box.innerHTML="<b>♡ 返信候補</b><p class='note'>この文章に合う返信はまだ登録されていません。意味を確認してから、日本語の返信を作ってね。無関係な返信を自動表示しないようにしています。</p>";return}box.style.display="block";box.innerHTML="<b>♡ おすすめの返信3種類</b><p class='note'>登録済みの定型返信です。相手の文脈に合うか確認して送ってね。</p>"+match.items.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p>'+esc(v[2])+'</p><button data-reply-index="'+i+'">この返信をコピー</button></div>').join("");box.querySelectorAll("[data-reply-index]").forEach(b=>b.addEventListener("click",async()=>{const v=match.items[Number(b.dataset.replyIndex)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}))}
+function showReplies(msg,meaning){const box=$("replySuggestions");if(isScallopWorkQuestion(msg)){showScallopReplies(box);return}if(isHomeQuestion(msg)){box.style.display="block";box.innerHTML="<b>♡ 帰宅状況に合わせた返信</b>"+renderHomeReplies(homeQuestionReplies,"home","data-home-reply");box.querySelectorAll("[data-home-reply]").forEach(b=>b.addEventListener("click",async()=>{const v=homeQuestionReplies[Number(b.dataset.replyNo)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}));return}if(isTiredQuestion(msg)){renderTiredQuestionReplies(box);return}const hay=normal(msg+" "+meaning);const match=replySets.find(group=>group.terms.some(t=>hay.includes(normal(t))));if(!match){box.style.display="block";box.innerHTML="<b>♡ 返信候補</b><p class='note'>この文章に合う返信はまだ登録されていません。意味を確認してから、日本語の返信を作ってね。無関係な返信を自動表示しないようにしています。</p>";return}box.style.display="block";box.innerHTML="<b>♡ おすすめの返信3種類</b><p class='note'>登録済みの定型返信です。相手の文脈に合うか確認して送ってね。</p>"+match.items.map((v,i)=>'<div class="card"><b>'+esc(v[0])+'</b><div class="thai">'+esc(v[1])+'</div><p>'+esc(v[2])+'</p><button data-reply-index="'+i+'">この返信をコピー</button></div>').join("");box.querySelectorAll("[data-reply-index]").forEach(b=>b.addEventListener("click",async()=>{const v=match.items[Number(b.dataset.replyIndex)];try{await navigator.clipboard.writeText(v[1]);b.textContent="コピーしました ✓"}catch{prompt("長押ししてコピーしてください",v[1])}}))}
 function findMessage(){const msg=$("msgIn").value.trim(),out=$("translationResult"),save=$("translationSave");$("translationStatus").textContent="";if(!msg){out.style.display="none";save.style.display="none";$("replySuggestions").style.display="none";return}out.style.display="block";save.style.display="block";const n=normal(msg);const fon=own.filter(x=>(String(x.cat||"").startsWith("Fon辞書")||x.cat==="💜Fon🩷")&&normal(x.th)===n);const exact=fon.length?fon:all().filter(x=>normal(x.th)===n);const k=known[msg]||known[n];let candidate=null;if(fon.length||exact.length){candidate=exact[0];out.innerHTML="<b>"+(fon.length?"♡ Fon辞書で確認済み":"登録例文と一致")+"</b><div class='thai'>"+esc(msg)+"</div><p>"+esc(candidate.ja)+"</p><p class='kana'>"+esc(candidate.ka||"")+"</p>"}else if(k){candidate=k;out.innerHTML="<b>日本語訳の候補</b><div class='thai'>"+esc(msg)+"</div><p>"+esc(k.ja)+"</p><p class='kana'>"+esc(k.ka)+"</p><small>文脈によって意味は変わります。</small>"}else{const close=all().map(x=>({x,t:normal(x.th)})).filter(v=>v.t.length>=4&&(n.includes(v.t)||v.t.includes(n))).slice(0,4);out.innerHTML=close.length?"<b>似た表現（全文訳ではありません）</b>"+close.map(v=>"<p>"+esc(v.x.th)+"： "+esc(v.x.ja)+"</p>").join("")+"<p class='note'>下の日本語訳は空欄です。意味を確認してから保存してください。</p>":"<b>まだ辞書にない文章です</b><p>Google翻訳で確認し、下に正しい日本語訳を入力すると次回から自動表示できます。</p>"}$("translationJa").value=candidate?candidate.ja:"";$("translationKana").value=candidate?candidate.ka||"":"";$("translationLang").value=fon.length?languageOf(fon[0]):"unverified";showReplies(msg,candidate?candidate.ja:"")}
 $("msgIn").addEventListener("input",findMessage);
 $("translationAdopt").addEventListener("click",()=>{
@@ -229,7 +241,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=33;
+const APP_VERSION=34;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
