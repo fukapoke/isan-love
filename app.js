@@ -6,7 +6,8 @@ const ownKey="isanlove_entries_v1",pendingKey="isanlove_fon_pending_v1";
 let own=get(ownKey,[]),pending=get(pendingKey,[]),bundled=Array.isArray(window.ISAN_LOVE_600)?window.ISAN_LOVE_600:[];
 const basics=[["会いたいよ","คิดฮอดเด้อ","キット・ホート・ドー","恋愛"],["愛してるよ","ฮักเจ้าเด้อ","ハック・ジャオ・ドー","恋愛"],["大丈夫だよ","บ่เป็นหยัง","ボー・ペン・ニャン","気遣い"],["ご飯食べた？","กินข้าวแล้วบ่?","ギン・カーオ・レーオ・ボー？","食事"]].map((x,i)=>({id:"basic"+i,ja:x[0],th:x[1],ka:x[2],cat:x[3]}));
 const callPhrases=[["これはどういう意味？","คำนี้แปลว่าอะไร","カム・ニー・プレー・ワー・アライ"],["もう一回言ってくれる？","พูดอีกครั้งได้ไหม","プート・イーク・クラン・ダイ・マイ"],["ゆっくり話してね","พูดช้า ๆ หน่อย","プート・チャー・チャー・ノイ"],["発音はこれで合ってる？","ผมออกเสียงถูกไหม","ポム・オーク・シアン・トゥーク・マイ"],["イサーン語では何て言うの？","ภาษาอีสานพูดว่าอะไร","パーサー・イーサーン・プート・ワー・アライ"],["分かったよ！","เข้าใจแล้ว","カオ・ジャイ・レーオ"],["文字で送ってくれる？","พิมพ์ส่งมาให้หน่อยได้ไหม","ピム・ソン・マー・ハイ・ノイ・ダイ・マイ"],["日本語で意味を調べてもいい？","ขอหาความหมายเป็นภาษาญี่ปุ่นก่อนได้ไหม","コー・ハー・クワームマーイ・ペン・パーサー・イープン・ゴーン・ダイ・マイ"],["この言葉を辞書に保存してもいい？","ขอบันทึกคำนี้ไว้ในพจนานุกรมได้ไหม","コー・バントゥック・カム・ニー・ワイ・ナイ・ポッチャナーヌクロム・ダイ・マイ"],["今日は何の言葉を教えてくれる？","วันนี้จะสอนคำว่าอะไร","ワンニー・ジャ・ソーン・カム・ワー・アライ"]].map((x,i)=>({id:"call"+i,ja:x[0],th:x[1],ka:x[2],cat:"電話で確認"}));
-const verifiedIsan=new Set(["คิดฮอดเด้อ","ฮักเจ้าเด้อ","บ่เป็นหยัง","กินข้าวแล้วบ่?","ข่อยฮักเจ้า","ข่อยคิดฮอดเจ้า","เมื่อยบ่?","ขอโทษเด้อ","เว้ากันดี ๆ ได้บ่?"]);const languageOf=x=>x.lang||(verifiedIsan.has(String(x.th||"").trim())?"isan":"unverified");let isanOnly=false;const all=()=>[...basics,...callPhrases,...bundled,...own];
+const addedIsan=[["水を飲みたい","ข่อยอยากกินน้ำ","コイ・ヤーク・ギン・ナーム","飲み物"],["水を飲む？","เจ้าสิกินน้ำบ่?","ジャオ・シ・ギン・ナーム・ボー？","飲み物"],["喉が渇いた","ข่อยหิวน้ำ","コイ・ヒウ・ナーム","飲み物"],["水を持ってきてくれる？","เอาน้ำมาให้ข่อยแน่","アオ・ナーム・マー・ハイ・コイ・ネー","飲み物"],["コーヒーを飲む？","เจ้าสิกินกาแฟบ่?","ジャオ・シ・ギン・ガーフェー・ボー？","飲み物"],["一緒に飲もう","มากินนำกัน","マー・ギン・ナム・ガン","飲み物"],["おいしい？","แซ่บบ่?","セープ・ボー？","飲み物"],["ありがとうね","ขอบใจเด้อ","コープ・ジャイ・ドー","気持ち"],["何してるの？","เฮ็ดหยังอยู่?","ヘット・ニャン・ユー？","日常"],["どこにいるの？","เจ้าอยู่ไส?","ジャオ・ユー・サイ？","場所"],["会いたいよ","คิดฮอดเด้อ","キット・ホート・ドー","恋愛"],["愛してるよ","ฮักเจ้าเด้อ","ハック・ジャオ・ドー","恋愛"]].map((x,i)=>({id:"verifiedIsan"+i,ja:x[0],th:x[1],ka:x[2],cat:x[3],lang:"isan"}));
+const verifiedIsan=new Set(["คิดฮอดเด้อ","ฮักเจ้าเด้อ","บ่เป็นหยัง","กินข้าวแล้วบ่?","ข่อยฮักเจ้า","ข่อยคิดฮอดเจ้า","เมื่อยบ่?","ขอโทษเด้อ","เว้ากันดี ๆ ได้บ่?"]);const languageOf=x=>x.lang||(verifiedIsan.has(String(x.th||"").trim())?"isan":"unverified");let isanOnly=false;const all=()=>[...basics,...callPhrases,...bundled,...addedIsan,...own];
 // Correct the first Fon entry previously classified as Isan by mistake.
 const correctedThai="ฉันจะรอคุยกับคุณนะคะ";
 if(own.some(x=>x.th===correctedThai&&x.lang==="isan")){const revised=own.map(x=>x.th===correctedThai&&x.lang==="isan"?{...x,lang:"thai"}:x);if(store(ownKey,revised))own=revised;}
@@ -92,7 +93,7 @@ try{
 renderPending();
 render();load();
 // Data is stored separately in localStorage and is never reset by app updates.
-const APP_VERSION=24;
+const APP_VERSION=25;
 let updateBusy=false;
 async function checkUpdate(){
  if(updateBusy||!navigator.onLine||document.hidden)return;
