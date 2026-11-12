@@ -134,6 +134,17 @@ async function handleVoiceAction(e){
   const area=document.createElement("div");area.dataset.voicePlayer="1";area.appendChild(player);play.parentNode.after(area);
  }catch(err){alert("音声の操作に失敗しました。iPhoneの空き容量やブラウザの保存設定を確認してね")}
 }
+// A private two-message memory: add only after the user taps the button.
+const loveExchange=[
+ {id:"fon_voice_love_20261112",ja:"Fon：私はあなたを愛してるよ ❤️（聞き取り推定）",th:"ข้อยฮักเจ้า",ka:"コイ・ハック・ジャオ",cat:"💜Fon🩷",lang:"isan",savedDate:"2026-11-12",replies:[["甘い返事","ข้อยกะฮักเจ้าคือกัน ❤️","俺も君を愛してるよ ❤️","コイ・ガ・ハック・ジャオ・クー・ガン"]]},
+ {id:"fon_voice_question_20261112",ja:"Fon：私のこと愛してる？ ❤️（聞き取り推定）",th:"เจ้าฮักข้อยบ่?",ka:"ジャオ・ハック・コイ・ボー？",cat:"💜Fon🩷",lang:"isan",savedDate:"2026-11-12",replies:[["優しい","ฮักเด้อ ❤️","愛してるよ ❤️","ハック・ドー"],["甘い","ข้อยฮักเจ้าหลาย ๆ เด้อ ❤️","俺は君をすごく愛してるよ ❤️","コイ・ハック・ジャオ・ラーイ・ラーイ・ドー"],["普段どおり","ฮักหลาย ๆ เด้อ ❤️","すごく愛してるよ ❤️","ハック・ラーイ・ラーイ・ドー"]]}
+];
+const loveBtn=document.getElementById("saveLoveExchange");
+if(loveBtn)loveBtn.addEventListener("click",()=>{
+ const existing=new Set(own.map(x=>x.id));const additions=loveExchange.filter(x=>!existing.has(x.id));
+ if(!additions.length){alert("ふたりの会話は登録済みだよ 💜 音声をそれぞれのカードに付けてね");$("q").value="Fon：";showTab("search");render();return}
+ const next=[...own,...additions];if(store(ownKey,next)){own=next;$("q").value="Fon：";showTab("search");render();alert("ふたりの会話を保存したよ 💜 2つのカードを開いて、それぞれの音声を選んでね")}
+});
 let visibleLimit=10;
 function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
@@ -262,7 +273,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=36;
+const APP_VERSION=37;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
