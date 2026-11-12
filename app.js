@@ -93,7 +93,7 @@ try{
 renderPending();
 render();load();
 // Data is stored separately in localStorage and is never reset by app updates.
-const APP_VERSION=25;
+const APP_VERSION=26;
 let updateBusy=false;
 async function checkUpdate(){
  if(updateBusy||!navigator.onLine||document.hidden)return;
