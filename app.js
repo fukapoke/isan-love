@@ -31,6 +31,8 @@ const specialReplies={
  ]
 };
 function availableReplies(x){
+ // Question intent takes priority over generic keyword matches and old stored suggestions.
+ if(isTiredQuestion(String(x.th||"")))return tiredQuestionReplies;
  if(Array.isArray(x.replies)&&x.replies.length)return x.replies;
  const special=specialReplies[String(x.th||"").trim()];
  if(special)return special;
@@ -211,7 +213,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=31;
+const APP_VERSION=32;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
