@@ -98,17 +98,21 @@ function renderCalendar(){
  const start=new Date(year,month-1,1).getDay(),last=new Date(year,month,0).getDate();
  const entries=fonEntries(),counts={};
  for(const x of entries){const date=entryDay(x);if(date)counts[date]=(counts[date]||0)+1}
+ const listeningHistory=(()=>{try{return JSON.parse(localStorage.getItem("isanlove_beginner_history_v1"))||{}}catch{return {}}})();
+ const listened=date=>Array.isArray(listeningHistory[date])?listeningHistory[date].map(th=>sceneLessons.find(x=>x.th===th)).filter(Boolean):[];
  let grid="";
  for(let i=0;i<start;i++)grid+='<span></span>';
  for(let d=1;d<=last;d++){
   const date=calMonth+"-"+String(d).padStart(2,"0"),isAnniversary=month===11&&d===3;
-  grid+='<button class="cal-day'+(date===calSelected?' selected':'')+(isAnniversary?' anniversary':'')+'" data-cal-day="'+date+'" aria-label="'+date+(isAnniversary?" 記念日":"")+'">'+d+(isAnniversary?'<span class="cal-dot">💜記念日</span>':counts[date]?'<span class="cal-dot">♥ '+counts[date]+'件</span>':'')+'</button>';
+  grid+='<button class="cal-day'+(date===calSelected?' selected':'')+(isAnniversary?' anniversary':'')+'" data-cal-day="'+date+'" aria-label="'+date+(isAnniversary?" 記念日":"")+'">'+d+(isAnniversary?'<span class="cal-dot">💜記念日</span>':counts[date]||listened(date).length?'<span class="cal-dot">'+(counts[date]?'♥ '+counts[date]+'件 ':'')+(listened(date).length?'🎧'+listened(date).length+'語':'')+'</span>':'')+'</button>';
  }
  $("calGrid").innerHTML=grid;
  const isAnniversary=calSelected.slice(5)==="11-03";
  $("calSelectedTitle").textContent=calSelected.replaceAll("-","/")+(isAnniversary?" 💜 記念日":"");
  const selected=entries.filter(x=>entryDay(x)===calSelected);
  $("calEntries").innerHTML=selected.length?selected.map(x=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-open="'+esc(x.id)+'">💌 辞書で見る</button></div>').join(""):'<p class="note">'+(isAnniversary?"💜 ふたりの大切な記念日":"この日に登録されたFonの言葉はまだないよ")+'</p>';
+ const heard=listened(calSelected);
+ $("calListening").innerHTML=heard.length?'<p class="note">🎧 この日に聞いた '+heard.length+'フレーズ</p><div class="row"><button id="calListenAll">▶️ この日の言葉を連続再生</button></div>'+heard.map((x,i)=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-listen="'+i+'">🔊 もう一度聞く</button></div>').join(""):'<p class="note">この日の聞き流し履歴はまだないよ。</p>';
  const unknown=entries.filter(x=>!entryDay(x));
  $("calUndated").innerHTML=unknown.length?unknown.map(x=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><p>'+esc(x.ja||"")+'</p><label>登録日<input type="date" data-cal-input="'+esc(x.id)+'"></label><button data-cal-set="'+esc(x.id)+'">この日付を保存</button></div>').join(""):'<p class="note">日付未設定の言葉はないよ。</p>';
 }
@@ -117,6 +121,12 @@ $("calPrev").addEventListener("click",()=>moveCalendar(-1));
 $("calNext").addEventListener("click",()=>moveCalendar(1));
 $("calGrid").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-day]");if(btn){calSelected=btn.dataset.calDay;renderCalendar()}});
 $("calUndated").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-set]");if(!btn)return;const input=Array.from($("calUndated").querySelectorAll("[data-cal-input]")).find(x=>x.dataset.calInput===btn.dataset.calSet);if(input&&input.value)setFonDate(btn.dataset.calSet,input.value);else alert("登録日を選んでね")});
+$("calListening").addEventListener("click",e=>{
+ const heard=(()=>{try{const h=JSON.parse(localStorage.getItem("isanlove_beginner_history_v1"))||{};return (Array.isArray(h[calSelected])?h[calSelected]:[]).map(th=>sceneLessons.find(x=>x.th===th)).filter(Boolean)}catch{return []}})();
+ const btn=e.target.closest("[data-cal-listen],#calListenAll");if(!btn||!heard.length)return;
+ if(btn.id==="calListenAll"){beginnerSequence(heard);return}
+ const x=heard[Number(btn.dataset.calListen)];if(x){beginnerStop();beginnerSaveHistory(x);beginnerSpeak(x.th,0.85)}
+});
 $("calEntries").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-open]");if(!btn)return;const x=own.find(v=>v.id===btn.dataset.calOpen);if(x){$("q").value=x.th;showTab("search");render();$("results").scrollIntoView({block:"start"})}});
 
 // Private voice clips live only in this device's IndexedDB, never in public GitHub.
@@ -619,7 +629,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=51;
+const APP_VERSION=52;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
