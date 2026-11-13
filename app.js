@@ -370,6 +370,32 @@ if($("conversationCard")){
  $("conversationCard").addEventListener("click",e=>{const b=e.target.closest("[data-conversation]");if(!b)return;const t=conversations[conversationIndex].turns[conversationStep];if(b.dataset.conversation==="listen")practiceSpeak(t[1]);if(b.dataset.conversation==="slow")practiceSpeak(t[1],0.65);if(b.dataset.conversation==="reveal"){conversationShown=true;renderConversation()}if(b.dataset.conversation==="next"){conversationStep=(conversationStep+1)%conversations[conversationIndex].turns.length;conversationShown=false;renderConversation()}});
  renderConversation();
 }
+// 26 question/answer pairs appended in v48; no network or microphone required.
+const pairItems=Array.from({length:26},(_,i)=>({q:sceneLessons[48+i*2],a:sceneLessons[49+i*2]})).filter(x=>x.q&&x.a);
+const pairProgressKey="isanlove_pair_progress_v1";
+let pairStats={};try{pairStats=JSON.parse(localStorage.getItem(pairProgressKey))||{}}catch{pairStats={}}
+let pairIndex=0,pairRevealed=false;
+const pairTheme=$("pairTheme"),pairQuestion=$("pairQuestion"),pairAnswer=$("pairAnswer");
+function pairChoices(){return pairItems.map((p,i)=>({...p,index:i})).filter(p=>!pairTheme||pairTheme.value==="all"||p.q.cat===pairTheme.value)}
+function pairRender(){if(!pairQuestion)return;const p=pairItems[pairIndex];if(!p)return;
+ const choices=pairChoices(),done=choices.filter(x=>(pairStats[x.q.th]?.good||0)>0).length;
+ $("pairProgress").textContent="テーマ内 "+done+" / "+choices.length+"組を1回以上クリア";
+ pairQuestion.innerHTML='<small>'+esc(p.q.cat)+'</small><h3>Fon役の質問</h3><div class="thai">'+esc(p.q.th)+'</div><div class="kana">'+esc(p.q.ka)+'</div><p>'+esc(p.q.ja)+'</p>';
+ pairAnswer.innerHTML=pairRevealed?'<div class="fon-details"><b>返事のお手本</b><div class="thai">'+esc(p.a.th)+'</div><div class="kana">'+esc(p.a.ka)+'</div><p>'+esc(p.a.ja)+'</p></div>':'<p class="note">返事を声に出してから「返事を見る」を押してね。</p>';
+ $("pairReveal").disabled=pairRevealed;$("pairReplay").disabled=!pairRevealed;$("pairAgain").disabled=!pairRevealed;$("pairGood").disabled=!pairRevealed;
+}
+function pairNext(){const pool=pairChoices();if(!pool.length)return;const sorted=[...pool].sort((a,b)=>(pairStats[a.q.th]?.good||0)-(pairStats[b.q.th]?.good||0));const pick=sorted.find(x=>x.index!==pairIndex)||sorted[0];pairIndex=pick.index;pairRevealed=false;pairRender()}
+if(pairQuestion){
+ const themes=[...new Set(pairItems.map(p=>p.q.cat))];pairTheme.innerHTML='<option value="all">すべてのテーマ</option>'+themes.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join("");
+ pairTheme.addEventListener("change",()=>{const first=pairChoices()[0];if(first)pairIndex=first.index;pairRevealed=false;pairRender()});
+ $("pairListen").addEventListener("click",()=>practiceSpeak(pairItems[pairIndex].q.th));
+ $("pairSlow").addEventListener("click",()=>practiceSpeak(pairItems[pairIndex].q.th,0.65));
+ $("pairReveal").addEventListener("click",()=>{pairRevealed=true;pairRender()});
+ $("pairReplay").addEventListener("click",()=>{if(pairRevealed)practiceSpeak(pairItems[pairIndex].a.th)});
+ $("pairAgain").addEventListener("click",()=>{if(!pairRevealed)return;const th=pairItems[pairIndex].q.th;pairStats[th]={...(pairStats[th]||{}),again:(pairStats[th]?.again||0)+1};try{localStorage.setItem(pairProgressKey,JSON.stringify(pairStats))}catch{};$("pairStatus").textContent="もう一度、質問から練習しよう";pairRevealed=false;pairRender()});
+ $("pairGood").addEventListener("click",()=>{if(!pairRevealed)return;const th=pairItems[pairIndex].q.th;pairStats[th]={...(pairStats[th]||{}),good:(pairStats[th]?.good||0)+1};try{localStorage.setItem(pairProgressKey,JSON.stringify(pairStats))}catch{};$("pairStatus").textContent="よくできたね！次の会話へ 💜";pairNext()});
+ pairRender();
+}
 let ownRecording=null,ownRecordingStream=null,ownRecordingUrl=null;
 function recordingStatus(t){const el=$("recordingStatus");if(el)el.textContent=t}
 function recordingCleanup(){if(ownRecordingStream){ownRecordingStream.getTracks().forEach(t=>t.stop());ownRecordingStream=null}}
@@ -524,7 +550,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=48;
+const APP_VERSION=49;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
