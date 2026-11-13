@@ -18,6 +18,8 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()
 document.querySelectorAll("[data-home-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.homeTab);window.scrollTo({top:0,behavior:"smooth"})}));
 
 document.querySelectorAll("[data-culture]").forEach(button=>button.addEventListener("click",()=>{const category=button.dataset.culture;document.querySelectorAll("[data-culture]").forEach(x=>x.classList.toggle("active",x===button));document.querySelectorAll("[data-culture-topic]").forEach(x=>{x.hidden=category!=="all"&&x.dataset.cultureTopic!==category})}));
+document.querySelectorAll("[data-culture-say]").forEach(b=>b.addEventListener("click",()=>{practiceSpeak(b.dataset.cultureSay);const status=$("cultureActionStatus");if(status)status.textContent="🔊 読み上げ中（端末のタイ語音声）"}));
+document.querySelectorAll("[data-culture-copy]").forEach(b=>b.addEventListener("click",async()=>{const status=$("cultureActionStatus");try{await navigator.clipboard.writeText(b.dataset.cultureCopy);if(status)status.textContent="コピーしたよ 💜"}catch{if(status)status.textContent="コピーできませんでした。タイ文字を長押ししてコピーしてね"}}));
 const googleNotesKey="isanlove_google_notes_v1";
 let googleNotes=get(googleNotesKey,[]);
 const specialReplies={
@@ -438,7 +440,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=45;
+const APP_VERSION=46;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
