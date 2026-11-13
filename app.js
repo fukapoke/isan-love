@@ -266,6 +266,50 @@ if($("sceneLessons")){$("sceneLessons").addEventListener("click",e=>{
 });renderScenes()}
 
 const fonPriorityLessons=[["💜 Fonに愛を伝える","愛してるよ","ฮักเจ้าเด้อ","ハック・ジャオ・ドー"],["💜 Fonに愛を伝える","すごく愛してるよ","ฮักเจ้าหลาย ๆ เด้อ","ハック・ジャオ・ラーイ・ラーイ・ドー"],["💜 Fonに愛を伝える","会いたいよ","คิดฮอดเจ้าเด้อ","キット・ホート・ジャオ・ドー"],["💜 Fonに愛を伝える","一緒にいたいよ","อยากอยู่กับเจ้า","ヤーク・ユー・ガップ・ジャオ"],["💜 Fonに愛を伝える","大切にするよ","สิดูแลเจ้าให้ดี","シ・ドゥーレー・ジャオ・ハイ・ディー"],["💜 Fonに愛を伝える","いつも想ってるよ","คิดฮอดเจ้าอยู่เสมอ","キット・ホート・ジャオ・ユー・サムー"],["🌷 Fonを気づかう","疲れた？","เมื่อยบ่?","ムアイ・ボー？"],["🌷 Fonを気づかう","無理しないでね","อย่าฝืนเด้อ","ヤー・フーン・ドー"],["🌷 Fonを気づかう","ゆっくり休んでね","พักผ่อนหลาย ๆ เด้อ","パック・ポーン・ラーイ・ラーイ・ドー"],["🌷 Fonを気づかう","ご飯食べた？","กินข้าวแล้วบ่?","ギン・カーオ・レーオ・ボー？"],["🌷 Fonを気づかう","大丈夫？","เป็นหยังบ่?","ペン・ニャン・ボー？"],["🌷 Fonを気づかう","気をつけてね","ระวังโตเด้อ","ラワン・トー・ドー"]].map((x,i)=>({id:"fonPriority"+i,cat:x[0],ja:x[1],th:x[2],ka:x[3],lang:"unverified"}));
+// Beginner mode: no tests, no microphone, and no remote storage.
+const beginnerKey="isanlove_beginner_v1";
+let beginnerSaved={};try{beginnerSaved=JSON.parse(localStorage.getItem(beginnerKey))||{}}catch{beginnerSaved={}}
+let beginnerActive=false,beginnerToken=0;
+const beginnerStarter=[sceneLessons[1],sceneLessons[0],sceneLessons[4]];
+function beginnerList(){
+ const n=Number($("beginnerCount")?.value||3);
+ const extra=sceneLessons.filter(x=>!beginnerStarter.some(y=>y.th===x.th));
+ const day=Math.floor(Date.now()/86400000),offset=(day*3)%extra.length;
+ return [...beginnerStarter,...Array.from({length:n-3},(_,i)=>extra[(offset+i)%extra.length])];
+}
+function beginnerRender(){
+ const root=$("beginnerCards");if(!root)return;const items=beginnerList();
+ root.innerHTML=items.map((x,i)=>'<div class="reply-card"><small>'+(i+1)+' / '+items.length+'</small><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-beginner-say="'+i+'">🔊 聞く</button><button data-beginner-slow="'+i+'">🐢 ゆっくり</button><button data-beginner-known="'+i+'">'+(beginnerSaved[x.th]?'✓ 聞き慣れた':'♡ 聞き慣れたら押す')+'</button></div></div>').join("");
+ $("beginnerPlay").textContent="▶️ "+items.length+"語を続けて聞く";
+ $("beginnerProgress").textContent="今日の「聞き慣れた」 "+items.filter(x=>beginnerSaved[x.th]).length+" / "+items.length+"語（端末内に保存）";
+}
+function beginnerStop(){beginnerActive=false;beginnerToken++;if("speechSynthesis" in window)speechSynthesis.cancel();if($("beginnerStatus"))$("beginnerStatus").textContent="停止したよ。好きな時にまた聞いてね。"}
+function beginnerSpeak(text,rate,done){
+ if(!("speechSynthesis" in window)){if($("beginnerStatus"))$("beginnerStatus").textContent="この端末は読み上げに対応していません";beginnerActive=false;return}
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="th-TH";u.rate=rate;
+ const v=speechSynthesis.getVoices().find(x=>x.lang.toLowerCase().startsWith("th"));if(v)u.voice=v;
+ u.onend=()=>{if(done)done()};u.onerror=()=>{beginnerActive=false;if($("beginnerStatus"))$("beginnerStatus").textContent="再生が止まりました。もう一度押してね。"};
+ speechSynthesis.speak(u);
+}
+if($("beginnerCards")){
+ $("beginnerCount").addEventListener("change",()=>{beginnerStop();beginnerRender()});
+ $("beginnerCards").addEventListener("click",e=>{
+  const b=e.target.closest("[data-beginner-say],[data-beginner-slow],[data-beginner-known]");if(!b)return;
+  const i=Number(b.dataset.beginnerSay??b.dataset.beginnerSlow??b.dataset.beginnerKnown),x=beginnerList()[i];if(!x)return;
+  if(b.hasAttribute("data-beginner-known")){beginnerSaved[x.th]=!beginnerSaved[x.th];try{localStorage.setItem(beginnerKey,JSON.stringify(beginnerSaved))}catch{};beginnerRender();return}
+  beginnerStop();beginnerSpeak(x.th,b.hasAttribute("data-beginner-slow")?0.65:0.85);
+ });
+ $("beginnerStop").addEventListener("click",beginnerStop);
+ $("beginnerPlay").addEventListener("click",()=>{
+  beginnerStop();beginnerActive=true;const token=beginnerToken,items=beginnerList();let index=0,repeat=0;
+  function next(){if(!beginnerActive||token!==beginnerToken)return;
+   if(index>=items.length){beginnerActive=false;$("beginnerStatus").textContent="今日はここまで！ よく聞けたね 💜";return}
+   const x=items[index];$("beginnerStatus").textContent=(index+1)+" / "+items.length+"：「"+x.ja+"」を聞いて真似してみよう（"+(repeat+1)+"/2回）";
+   beginnerSpeak(x.th,repeat===0?0.75:0.85,()=>{if(!beginnerActive||token!==beginnerToken)return;repeat++;if(repeat>=2){repeat=0;index++}next()});
+  }next();
+ });
+ beginnerRender();
+}
 const practiceKey="isanlove_practice_v1";
 let practiceStats=(()=>{try{return JSON.parse(localStorage.getItem(practiceKey))||{}}catch{return {}}})();
 let practiceMode="listen",practiceScene="💜 Fonに愛を伝える",practiceCurrent=null,practiceReveal=false,practiceQueue=[],practiceDone=0;
@@ -550,7 +594,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=49;
+const APP_VERSION=50;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
