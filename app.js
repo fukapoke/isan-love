@@ -87,6 +87,8 @@ const validDay=s=>typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.is
 const entryDay=x=>validDay(x.savedDate)?x.savedDate:(typeof x.createdAt==="string"&&validDay(x.createdAt.slice(0,10))?x.createdAt.slice(0,10):"");
 let calMonth=localDay().slice(0,7),calSelected=localDay();
 const fonEntries=()=>own;
+const entrySource=x=>["fon","mine","unknown"].includes(x.source)?x.source:(x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書")?"fon":"unknown");
+function setEntrySource(id,source){if(!["fon","mine","unknown"].includes(source))return;const next=own.map(x=>String(x.id)===String(id)?{...x,source}:x);if(store(ownKey,next)){own=next;renderCalendar()}}
 function setFonDate(id,date){
  if(!validDay(date)){alert("正しい年月日（例：2026-11-03）を入力してね");return}
  const next=own.map(x=>x.id===id?{...x,savedDate:date}:x);
@@ -97,21 +99,21 @@ function renderCalendar(){
  $("calTitle").textContent=year+"年"+month+"月";
  const start=new Date(year,month-1,1).getDay(),last=new Date(year,month,0).getDate();
  const entries=fonEntries(),counts={};
- for(const x of entries){const date=entryDay(x);if(date)counts[date]=(counts[date]||0)+1}
+ for(const x of entries){const date=entryDay(x);if(date){const c=counts[date]||(counts[date]={fon:0,mine:0,unknown:0});c[entrySource(x)]++}}
  const listeningHistory=(()=>{try{return JSON.parse(localStorage.getItem("isanlove_beginner_history_v1"))||{}}catch{return {}}})();
  const listened=date=>Array.isArray(listeningHistory[date])?listeningHistory[date].map(th=>sceneLessons.find(x=>x.th===th)).filter(Boolean):[];
  let grid="";
  for(let i=0;i<start;i++)grid+='<span></span>';
  for(let d=1;d<=last;d++){
   const date=calMonth+"-"+String(d).padStart(2,"0"),isAnniversary=month===11&&d===3;
-  const fonCount=counts[date]||0,listenCount=listened(date).length;
-  grid+='<button class="cal-day'+(date===calSelected?' selected':'')+(isAnniversary?' anniversary':'')+(fonCount?' has-fon':'')+(listenCount?' has-listen':'')+'" data-cal-day="'+date+'" aria-label="'+date+(isAnniversary?' 記念日':'')+(fonCount?' 保存'+fonCount+'件':'')+(listenCount?' 聞き流し'+listenCount+'語':'')+'">'+d+(isAnniversary?'<span class="cal-dot">💜記念日</span>':'')+(fonCount?'<span class="cal-dot cal-dot-fon">💗'+fonCount+'</span>':'')+(listenCount?'<span class="cal-dot cal-dot-listen">🎧'+listenCount+'</span>':'')+'</button>';
+  const savedCounts=counts[date]||{fon:0,mine:0,unknown:0},fonCount=savedCounts.fon,mineCount=savedCounts.mine,unknownCount=savedCounts.unknown,listenCount=listened(date).length;
+  grid+='<button class="cal-day'+(date===calSelected?' selected':'')+(isAnniversary?' anniversary':'')+(fonCount?' has-fon':'')+(mineCount||unknownCount?' has-saved':'')+(listenCount?' has-listen':'')+'" data-cal-day="'+date+'" aria-label="'+date+(isAnniversary?' 記念日':'')+(fonCount?' Fon'+fonCount+'件':'')+(mineCount?' 自分'+mineCount+'件':'')+(unknownCount?' 未分類'+unknownCount+'件':'')+(listenCount?' 聞き流し'+listenCount+'語':'')+'">'+d+(isAnniversary?'<span class="cal-dot">💜記念日</span>':'')+(fonCount?'<span class="cal-dot cal-dot-fon">💗'+fonCount+'</span>':'')+(mineCount?'<span class="cal-dot cal-dot-mine">📝'+mineCount+'</span>':'')+(unknownCount?'<span class="cal-dot cal-dot-unknown">❔'+unknownCount+'</span>':'')+(listenCount?'<span class="cal-dot cal-dot-listen">🎧'+listenCount+'</span>':'')+'</button>';
  }
  $("calGrid").innerHTML=grid;
  const isAnniversary=calSelected.slice(5)==="11-03";
  $("calSelectedTitle").textContent=calSelected.replaceAll("-","/")+(isAnniversary?" 💜 記念日":"");
  const selected=entries.filter(x=>entryDay(x)===calSelected);
- $("calEntries").innerHTML=selected.length?selected.map(x=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-open="'+esc(x.id)+'">💌 辞書で見る</button></div>').join(""):'<p class="note">'+(isAnniversary?"💜 ふたりの大切な記念日":"この日に登録されたFonの言葉はまだないよ")+'</p>';
+ $("calEntries").innerHTML=selected.length?selected.map(x=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><label>保存元<select data-cal-source="'+esc(x.id)+'"><option value="fon"'+(entrySource(x)==="fon"?' selected':'')+'>💗 FonからのLINE</option><option value="mine"'+(entrySource(x)==="mine"?' selected':'')+'>📝 自分で登録した言葉</option><option value="unknown"'+(entrySource(x)==="unknown"?' selected':'')+'>❔ 未分類</option></select></label><button data-cal-open="'+esc(x.id)+'">📖 辞書で見る</button></div>').join(""):'<p class="note">'+(isAnniversary?"💜 ふたりの大切な記念日":"この日に保存された言葉はまだないよ")+'</p>';
  const heard=listened(calSelected);
  $("calListening").innerHTML=heard.length?'<p class="note">🎧 この日に聞いた '+heard.length+'フレーズ</p><div class="row"><button id="calListenAll">▶️ この日の言葉を連続再生</button></div>'+heard.map((x,i)=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-listen="'+i+'">🔊 もう一度聞く</button></div>').join(""):'<p class="note">この日の聞き流し履歴はまだないよ。</p>'+(calSelected==="2026-11-13"?'<div class="card"><p>💜 11月13日に最初に流した3語は、旧バージョンでは日付が保存されていませんでした。</p><p class="note">最初の3語（愛してるよ・会いたいよ・おやすみ）を、この日の履歴として補登録できます。実際の再生記録を復元するものではありません。</p><button id="calRestoreFirst3">＋ 最初の3語を11月13日に登録</button></div>':'');
  const unknown=entries.filter(x=>!entryDay(x));
@@ -137,6 +139,7 @@ $("calListening").addEventListener("click",e=>{
  if(btn.id==="calListenAll"){beginnerSequence(heard);return}
  const x=heard[Number(btn.dataset.calListen)];if(x){beginnerStop();beginnerSaveHistory(x);beginnerSpeak(x.th,0.85)}
 });
+$("calEntries").addEventListener("change",e=>{const el=e.target.closest("[data-cal-source]");if(el)setEntrySource(el.dataset.calSource,el.value)});
 $("calEntries").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-open]");if(!btn)return;const x=own.find(v=>v.id===btn.dataset.calOpen);if(x){$("q").value=x.th;showTab("search");render();$("results").scrollIntoView({block:"start"})}});
 
 // Private voice clips live only in this device's IndexedDB, never in public GitHub.
@@ -566,7 +569,7 @@ $("translationAdopt").addEventListener("click",()=>{
  if(previous&&previous.ja===ja&&previous.ka===ka&&languageOf(previous)===lang){status.textContent="💜Fon🩷 辞書に登録済みだよ";return}
  if(!confirm("答え合わせした内容を 💜Fon🩷 辞書に保存する？"))return;
  const next=own.filter(x=>!((x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"))&&normal(x.th)===normal(th)));
- next.push({id:previous?.id||"fon"+Date.now(),th,ja,ka,lang,cat:"💜Fon🩷",savedDate:previous?entryDay(previous):localDay()});
+ next.push({id:previous?.id||"fon"+Date.now(),th,ja,ka,lang,cat:"💜Fon🩷",source:"fon",savedDate:previous?entryDay(previous):localDay()});
  if(!store(ownKey,next))return;
  own=next;
  const remaining=pending.filter(x=>normal(x.th)!==normal(th));
@@ -581,7 +584,7 @@ $("askTsuu").addEventListener("click",async()=>{const msg=$("msgIn").value.trim(
 function google(text,sl,tl){if(!text.trim()){alert("文章を入力してください");return}location.href="https://translate.google.com/?sl="+sl+"&tl="+tl+"&text="+encodeURIComponent(text)+"&op=translate"}
 $("externalThai").addEventListener("click",()=>google($("msgIn").value,"auto","ja"));
 $("replyTranslate").addEventListener("click",()=>google($("replyJa").value,"ja","th"));
-$("save").addEventListener("click",()=>{const x={id:"own"+Date.now(),ja:$("ja").value.trim(),th:$("th").value.trim(),ka:$("ka").value.trim(),cat:$("cat").value.trim()||"自分の単語",savedDate:localDay()};if(!x.ja||!x.th){alert("日本語とタイ文字を入力してください");return}own.push(x);if(store(ownKey,own)){["ja","th","ka","cat"].forEach(k=>$(k).value="");render();alert("保存しました")}});
+$("save").addEventListener("click",()=>{const x={id:"own"+Date.now(),ja:$("ja").value.trim(),th:$("th").value.trim(),ka:$("ka").value.trim(),cat:$("cat").value.trim()||"自分の単語",savedDate:localDay(),source:$("addSource").value};if(!x.ja||!x.th){alert("日本語とタイ文字を入力してください");return}own.push(x);if(store(ownKey,own)){["ja","th","ka","cat"].forEach(k=>$(k).value="");render();alert("保存しました")}});
 async function safeBackup(){const payload={format:"isan-love-backup-v2",exportedAt:new Date().toISOString(),entries:own,pending:pending,googleNotes:googleNotes};const content=JSON.stringify(payload,null,2),name="ISAN-LOVE-Fon-"+new Date().toISOString().slice(0,10)+".json";const status=$("safeBackupStatus");try{const file=new File([content],name,{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"ISAN LOVE バックアップ"});status.textContent="共有が完了したら「ファイルに保存」を確認してね。";return}}catch(e){if(e.name==="AbortError"){status.textContent="保存をキャンセルしました";return}}download(name,content,"application/json");status.textContent="バックアップを作成しました。「ファイル」に保存されたか確認してね。"}
 $("safeBackup").addEventListener("click",safeBackup);
 function download(name,data,type){const a=document.createElement("a"),url=URL.createObjectURL(new Blob([data],{type}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
@@ -619,7 +622,7 @@ function registerFonData(){
   if(!confirm("次の内容で辞書に登録する？\n\n"+data.th+"\n"+data.ja+"\n"+data.ka+"\n分類："+langName+"\n\n同じFonの文章がある場合は更新します。"))return;
   const next=own.filter(v=>!((v.cat==="💜Fon🩷"||String(v.cat||"").startsWith("Fon辞書"))&&normal(v.th)===normal(data.th)));
   const previous=own.find(x=>(x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"))&&normal(x.th)===normal(data.th));
-  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",savedDate:previous?entryDay(previous):localDay()});
+  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",source:"fon",savedDate:previous?entryDay(previous):localDay()});
   if(!store(ownKey,next))return;
   own=next;pending=pending.filter(x=>normal(x.th)!==normal(data.th));store(pendingKey,pending);
   $("msgIn").value=data.th;renderPending();render();findMessage();
@@ -639,7 +642,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=56;
+const APP_VERSION=57;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
