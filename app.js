@@ -104,7 +104,8 @@ function renderCalendar(){
  for(let i=0;i<start;i++)grid+='<span></span>';
  for(let d=1;d<=last;d++){
   const date=calMonth+"-"+String(d).padStart(2,"0"),isAnniversary=month===11&&d===3;
-  grid+='<button class="cal-day'+(date===calSelected?' selected':'')+(isAnniversary?' anniversary':'')+'" data-cal-day="'+date+'" aria-label="'+date+(isAnniversary?" 記念日":"")+'">'+d+(isAnniversary?'<span class="cal-dot">💜記念日</span>':counts[date]||listened(date).length?'<span class="cal-dot">'+(counts[date]?'♥ '+counts[date]+'件 ':'')+(listened(date).length?'🎧'+listened(date).length+'語':'')+'</span>':'')+'</button>';
+  const fonCount=counts[date]||0,listenCount=listened(date).length;
+  grid+='<button class="cal-day'+(date===calSelected?' selected':'')+(isAnniversary?' anniversary':'')+(fonCount?' has-fon':'')+(listenCount?' has-listen':'')+'" data-cal-day="'+date+'" aria-label="'+date+(isAnniversary?' 記念日':'')+(fonCount?' 保存'+fonCount+'件':'')+(listenCount?' 聞き流し'+listenCount+'語':'')+'">'+d+(isAnniversary?'<span class="cal-dot">💜記念日</span>':'')+(fonCount?'<span class="cal-dot cal-dot-fon">💗'+fonCount+'</span>':'')+(listenCount?'<span class="cal-dot cal-dot-listen">🎧'+listenCount+'</span>':'')+'</button>';
  }
  $("calGrid").innerHTML=grid;
  const isAnniversary=calSelected.slice(5)==="11-03";
@@ -638,7 +639,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=55;
+const APP_VERSION=56;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
