@@ -264,6 +264,50 @@ if($("earStart")){
  $("earNext").addEventListener("click",()=>{if(earRunning){earStop();earStatus("停止しました。次の再生では最初から始まります。")}else earStatus("再生を開始してね")});
  document.addEventListener("visibilitychange",()=>{if(document.hidden&&earRunning)earStatus("画面を閉じるとiPhoneでは音声が停止する場合があります")});
 }
+
+/* Phase 2-3: guided conversation and local pronunciation playback. */
+const conversations=[
+ {name:"💜 愛情を伝える",turns:[["Fonに伝える","ฮักเจ้าเด้อ","愛してるよ","ハック・ジャオ・ドー"],["Fonからの質問（練習用）","เจ้าฮักข้อยบ่?","私のこと愛してる？","ジャオ・ハック・コイ・ボー？"],["返事をする","ฮักหลาย ๆ เด้อ","すごく愛してるよ","ハック・ラーイ・ラーイ・ドー"]]},
+ {name:"🌷 疲れを気づかう",turns:[["Fonに聞く","เมื่อยบ่?","疲れた？","ムアイ・ボー？"],["返事の例","เมื่อยหลาย","とても疲れた","ムアイ・ラーイ"],["優しく伝える","พักผ่อนหลาย ๆ เด้อ","ゆっくり休んでね","パック・ポーン・ラーイ・ラーイ・ドー"]]},
+ {name:"🍚 食事の会話",turns:[["Fonに聞く","กินข้าวแล้วบ่?","ご飯食べた？","ギン・カーオ・レーオ・ボー？"],["返事の例","กินแล้ว","食べたよ","ギン・レーオ"],["気づかう","กินข้าวหลาย ๆ เด้อ","しっかり食べてね","ギン・カーオ・ラーイ・ラーイ・ドー"]]}
+];
+let conversationIndex=0,conversationStep=0,conversationShown=false;
+function renderConversation(){
+ const el=$("conversationCard");if(!el)return;const scene=conversations[conversationIndex],t=scene.turns[conversationStep];
+ el.innerHTML='<small>'+esc(scene.name)+' · '+(conversationStep+1)+' / '+scene.turns.length+'</small><h3>'+esc(t[0])+'</h3><div style="font-size:21px;font-weight:bold;margin:12px 0">'+esc(t[2])+'</div><div class="row"><button data-conversation="listen">🔊 お手本を聞く</button><button data-conversation="slow">🐢 ゆっくり</button></div><p class="note">先に声に出してから、答えを見てね。</p>'+(conversationShown?'<div class="fon-details"><div class="thai">'+esc(t[1])+'</div><div class="kana">'+esc(t[3])+'</div></div>':'')+'<div class="row"><button data-conversation="reveal">答えを見る</button><button class="primary" data-conversation="next">次のセリフへ</button></div>';
+}
+if($("conversationCard")){
+ const sel=$("conversationScene");sel.innerHTML=conversations.map((x,i)=>'<option value="'+i+'">'+esc(x.name)+'</option>').join("");
+ sel.addEventListener("change",()=>{conversationIndex=Number(sel.value);conversationStep=0;conversationShown=false;renderConversation()});
+ $("conversationCard").addEventListener("click",e=>{const b=e.target.closest("[data-conversation]");if(!b)return;const t=conversations[conversationIndex].turns[conversationStep];if(b.dataset.conversation==="listen")practiceSpeak(t[1]);if(b.dataset.conversation==="slow")practiceSpeak(t[1],0.65);if(b.dataset.conversation==="reveal"){conversationShown=true;renderConversation()}if(b.dataset.conversation==="next"){conversationStep=(conversationStep+1)%conversations[conversationIndex].turns.length;conversationShown=false;renderConversation()}});
+ renderConversation();
+}
+let ownRecording=null,ownRecordingStream=null,ownRecordingUrl=null;
+function recordingStatus(t){const el=$("recordingStatus");if(el)el.textContent=t}
+function recordingCleanup(){if(ownRecordingStream){ownRecordingStream.getTracks().forEach(t=>t.stop());ownRecordingStream=null}}
+if($("recordStart")){
+ $("recordExample").innerHTML=fonPriorityLessons.map((x,i)=>'<option value="'+i+'">'+esc(x.ja)+'</option>').join("");
+ $("recordSample").addEventListener("click",()=>practiceSpeak(fonPriorityLessons[Number($("recordExample").value)].th));
+ $("recordStart").addEventListener("click",async()=>{
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){recordingStatus("この端末では録音できません");return}
+  try{
+   recordingCleanup();ownRecordingStream=await navigator.mediaDevices.getUserMedia({audio:true});
+   const chunks=[];ownRecording=new MediaRecorder(ownRecordingStream);
+   ownRecording.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+   ownRecording.onstop=()=>{
+    recordingCleanup();if(ownRecordingUrl)URL.revokeObjectURL(ownRecordingUrl);
+    const blob=new Blob(chunks,{type:ownRecording.mimeType||"audio/mp4"});
+    if(!blob.size){recordingStatus("録音が空でした");return}
+    ownRecordingUrl=URL.createObjectURL(blob);
+    const player=$("recordPlayback");player.src=ownRecordingUrl;player.hidden=false;
+    recordingStatus("録音できたよ。再生してお手本と聞き比べよう。端末外には送信されません。");
+   };
+   ownRecording.start();recordingStatus("🔴 録音中。終わったら停止を押してね。");
+  }catch{recordingStatus("マイクを利用できませんでした。端末のマイク許可を確認してね。")}
+ });
+ $("recordStop").addEventListener("click",()=>{if(ownRecording&&ownRecording.state==="recording")ownRecording.stop();else recordingStatus("録音は開始されていません")});
+ window.addEventListener("pagehide",recordingCleanup);
+}
 let visibleLimit=10;
 function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
@@ -392,7 +436,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=41;
+const APP_VERSION=42;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
