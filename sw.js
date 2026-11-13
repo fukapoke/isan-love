@@ -1,4 +1,4 @@
-const CACHE="isan-love-v47";
+const CACHE="isan-love-v48";
 const ASSETS=["./","./index.html","./app.js","./manifest.webmanifest","./icon.svg","./examples-600.csv","./examples.js"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",event=>{event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("isan-love-")&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]))});
