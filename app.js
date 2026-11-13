@@ -14,7 +14,8 @@ if(own.some(x=>x.th===correctedThai&&x.lang==="isan")){const revised=own.map(x=>
 const normal=s=>String(s||"").replace(/[\s\u200b.,!?！？。、「」]/g,"").toLowerCase();
 const known={"ฉันคิดถึงคุณนะคะ":{ja:"あなたが恋しいです／会いたいな",ka:"チャン・キットトゥン・クン・ナ・カ"},"คิดถึงนะ":{ja:"会いたいよ／恋しいよ",ka:"キットトゥン・ナ"}};
 function showTab(tab){document.querySelectorAll("main section").forEach(x=>x.classList.toggle("hide",x.id!==tab));document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab))}
-document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.tab);const menu=$("moreMenu");if(menu)menu.open=false;window.scrollTo({top:0,behavior:"smooth"})}));
+document.querySelectorAll("[data-home-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.homeTab);window.scrollTo({top:0,behavior:"smooth"})}));
 
 const googleNotesKey="isanlove_google_notes_v1";
 let googleNotes=get(googleNotesKey,[]);
@@ -436,7 +437,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=42;
+const APP_VERSION=43;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
