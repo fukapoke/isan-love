@@ -112,7 +112,7 @@ function renderCalendar(){
  const selected=entries.filter(x=>entryDay(x)===calSelected);
  $("calEntries").innerHTML=selected.length?selected.map(x=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-open="'+esc(x.id)+'">💌 辞書で見る</button></div>').join(""):'<p class="note">'+(isAnniversary?"💜 ふたりの大切な記念日":"この日に登録されたFonの言葉はまだないよ")+'</p>';
  const heard=listened(calSelected);
- $("calListening").innerHTML=heard.length?'<p class="note">🎧 この日に聞いた '+heard.length+'フレーズ</p><div class="row"><button id="calListenAll">▶️ この日の言葉を連続再生</button></div>'+heard.map((x,i)=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-listen="'+i+'">🔊 もう一度聞く</button></div>').join(""):'<p class="note">この日の聞き流し履歴はまだないよ。</p>'+(calSelected==="2026-11-12"?'<div class="card"><p>💜 11月12日に最初に流した3語は、旧バージョンでは日付が保存されていませんでした。</p><p class="note">最初の3語（愛してるよ・会いたいよ・おやすみ）を、この日の履歴として補登録できます。実際の再生記録を復元するものではありません。</p><button id="calRestoreFirst3">＋ 最初の3語を11月12日に登録</button></div>':'');
+ $("calListening").innerHTML=heard.length?'<p class="note">🎧 この日に聞いた '+heard.length+'フレーズ</p><div class="row"><button id="calListenAll">▶️ この日の言葉を連続再生</button></div>'+heard.map((x,i)=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka||"")+'</div><p>'+esc(x.ja||"")+'</p><button data-cal-listen="'+i+'">🔊 もう一度聞く</button></div>').join(""):'<p class="note">この日の聞き流し履歴はまだないよ。</p>'+(calSelected==="2026-11-13"?'<div class="card"><p>💜 11月13日に最初に流した3語は、旧バージョンでは日付が保存されていませんでした。</p><p class="note">最初の3語（愛してるよ・会いたいよ・おやすみ）を、この日の履歴として補登録できます。実際の再生記録を復元するものではありません。</p><button id="calRestoreFirst3">＋ 最初の3語を11月13日に登録</button></div>':'');
  const unknown=entries.filter(x=>!entryDay(x));
  $("calUndated").innerHTML=unknown.length?unknown.map(x=>'<div class="cal-date-entry"><div class="thai">'+esc(x.th)+'</div><p>'+esc(x.ja||"")+'</p><label>登録日<input type="date" data-cal-input="'+esc(x.id)+'"></label><button data-cal-set="'+esc(x.id)+'">この日付を保存</button></div>').join(""):'<p class="note">日付未設定の言葉はないよ。</p>';
 }
@@ -123,7 +123,7 @@ $("calGrid").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-
 $("calUndated").addEventListener("click",e=>{const btn=e.target.closest("[data-cal-set]");if(!btn)return;const input=Array.from($("calUndated").querySelectorAll("[data-cal-input]")).find(x=>x.dataset.calInput===btn.dataset.calSet);if(input&&input.value)setFonDate(btn.dataset.calSet,input.value);else alert("登録日を選んでね")});
 $("calListening").addEventListener("click",e=>{
  if(e.target.closest("#calRestoreFirst3")){
-  const key="isanlove_beginner_history_v1",date="2026-11-12";
+  const key="isanlove_beginner_history_v1",date="2026-11-13";
   let history={};try{history=JSON.parse(localStorage.getItem(key))||{}}catch{}
   const original=[sceneLessons[1].th,sceneLessons[0].th,sceneLessons[4].th];
   history[date]=Array.from(new Set([...(Array.isArray(history[date])?history[date]:[]),...original]));
@@ -159,8 +159,8 @@ async function handleVoiceAction(e){
 }
 // A private two-message memory: add only after the user taps the button.
 const loveExchange=[
- {id:"fon_voice_love_20261112",ja:"Fon：私はあなたを愛してるよ ❤️（聞き取り推定）",th:"ข้อยฮักเจ้า",ka:"コイ・ハック・ジャオ",cat:"💜Fon🩷",lang:"isan",savedDate:"2026-11-12",replies:[["甘い返事","ข้อยกะฮักเจ้าคือกัน ❤️","俺も君を愛してるよ ❤️","コイ・ガ・ハック・ジャオ・クー・ガン"]]},
- {id:"fon_voice_question_20261112",ja:"Fon：私のこと愛してる？ ❤️（聞き取り推定）",th:"เจ้าฮักข้อยบ่?",ka:"ジャオ・ハック・コイ・ボー？",cat:"💜Fon🩷",lang:"isan",savedDate:"2026-11-12",replies:[["優しい","ฮักเด้อ ❤️","愛してるよ ❤️","ハック・ドー"],["甘い","ข้อยฮักเจ้าหลาย ๆ เด้อ ❤️","俺は君をすごく愛してるよ ❤️","コイ・ハック・ジャオ・ラーイ・ラーイ・ドー"],["普段どおり","ฮักหลาย ๆ เด้อ ❤️","すごく愛してるよ ❤️","ハック・ラーイ・ラーイ・ドー"]]}
+ {id:"fon_voice_love_20261112",ja:"Fon：私はあなたを愛してるよ ❤️（聞き取り推定）",th:"ข้อยฮักเจ้า",ka:"コイ・ハック・ジャオ",cat:"💜Fon🩷",lang:"isan",savedDate:"2026-11-13",replies:[["甘い返事","ข้อยกะฮักเจ้าคือกัน ❤️","俺も君を愛してるよ ❤️","コイ・ガ・ハック・ジャオ・クー・ガン"]]},
+ {id:"fon_voice_question_20261112",ja:"Fon：私のこと愛してる？ ❤️（聞き取り推定）",th:"เจ้าฮักข้อยบ่?",ka:"ジャオ・ハック・コイ・ボー？",cat:"💜Fon🩷",lang:"isan",savedDate:"2026-11-13",replies:[["優しい","ฮักเด้อ ❤️","愛してるよ ❤️","ハック・ドー"],["甘い","ข้อยฮักเจ้าหลาย ๆ เด้อ ❤️","俺は君をすごく愛してるよ ❤️","コイ・ハック・ジャオ・ラーイ・ラーイ・ドー"],["普段どおり","ฮักหลาย ๆ เด้อ ❤️","すごく愛してるよ ❤️","ハック・ラーイ・ラーイ・ドー"]]}
 ];
 const loveBtn=document.getElementById("saveLoveExchange");
 if(loveBtn)loveBtn.addEventListener("click",()=>{
@@ -638,7 +638,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=54;
+const APP_VERSION=55;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
