@@ -223,6 +223,47 @@ if($("practiceCard")){
  });
  practiceNext();
 }
+
+/* Phase 1: audio-first, continuous listening. No recordings are uploaded. */
+let earRunning=false,earToken=0,earPosition=0,earList=[],earPlayed=0;
+const earSettingsKey="isanlove_ear_settings_v1";
+let earSettings=(()=>{try{return {...{scene:"💜 Fonに愛を伝える",count:10,repeat:2,rate:0.85,japanese:true},...JSON.parse(localStorage.getItem(earSettingsKey)||"{}")}}catch{return {scene:"💜 Fonに愛を伝える",count:10,repeat:2,rate:0.85,japanese:true}}})();
+function earSaveSettings(){try{localStorage.setItem(earSettingsKey,JSON.stringify(earSettings))}catch{}}
+function earSpeak(text,lang,rate,token){return new Promise(resolve=>{
+ if(!earRunning||token!==earToken||!("speechSynthesis" in window)){resolve(false);return}
+ let finished=false;const done=ok=>{if(finished)return;finished=true;resolve(ok)};
+ const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=rate;
+ if(lang==="th-TH"){const v=speechSynthesis.getVoices().find(x=>x.lang.toLowerCase().startsWith("th"));if(v)u.voice=v}
+ u.onend=()=>done(true);u.onerror=()=>done(false);
+ try{speechSynthesis.speak(u)}catch{done(false)}
+ })}
+function earStatus(msg){const e=$("earStatus");if(e)e.textContent=msg}
+function earStop(){earRunning=false;earToken++;if("speechSynthesis" in window)speechSynthesis.cancel();const b=$("earStart");if(b)b.textContent="▶️ 連続再生を開始"}
+function earPool(){const allP=[...fonPriorityLessons,...sceneLessons,...own.filter(x=>x.th&&x.ja)];const filtered=allP.filter(x=>earSettings.scene==="all"||x.cat===earSettings.scene);return filtered.filter((x,i)=>filtered.findIndex(y=>y.th===x.th)===i)}
+async function earPlay(){
+ if(!("speechSynthesis" in window)){earStatus("この端末は音声読み上げに対応していません");return}
+ earStop();earRunning=true;const token=earToken;
+ earList=earPool().slice(0,earSettings.count);earPosition=0;earPlayed=0;
+ if(!earList.length){earStop();earStatus("このシーンには言葉がありません");return}
+ $("earStart").textContent="■ 停止";
+ for(;earPosition<earList.length&&earRunning&&token===earToken;earPosition++){
+  const x=earList[earPosition];earStatus((earPosition+1)+"/"+earList.length+"： "+x.ja+" ／ "+x.ka);
+  if(earSettings.japanese){const ok=await earSpeak(x.ja,"ja-JP",0.95,token);if(!ok)break}
+  for(let i=0;i<earSettings.repeat&&earRunning&&token===earToken;i++){const ok=await earSpeak(x.th,"th-TH",earSettings.rate,token);if(!ok)break}
+  earPlayed++;
+ }
+ if(token===earToken){earStop();earStatus("再生終了："+earPlayed+"フレーズ。今日もお疲れさま 💜")}
+}
+if($("earStart")){
+ const scene=$("earScene");scene.innerHTML='<option value="all">すべて</option>'+[...new Set([...fonPriorityLessons,...sceneLessons].map(x=>x.cat))].map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("");
+ scene.value=earSettings.scene;
+ $("earCount").value=String(earSettings.count);$("earRepeat").value=String(earSettings.repeat);$("earRate").value=String(earSettings.rate);$("earJapanese").checked=earSettings.japanese;
+ const changed=()=>{earSettings={scene:scene.value,count:Number($("earCount").value),repeat:Number($("earRepeat").value),rate:Number($("earRate").value),japanese:$("earJapanese").checked};earSaveSettings();if(earRunning){earStop();earStatus("設定を変更したよ。もう一度再生してね。")}};
+ [scene,$("earCount"),$("earRepeat"),$("earRate"),$("earJapanese")].forEach(x=>x.addEventListener("change",changed));
+ $("earStart").addEventListener("click",()=>earRunning?earStop():earPlay());
+ $("earNext").addEventListener("click",()=>{if(earRunning){earStop();earStatus("停止しました。次の再生では最初から始まります。")}else earStatus("再生を開始してね")});
+ document.addEventListener("visibilitychange",()=>{if(document.hidden&&earRunning)earStatus("画面を閉じるとiPhoneでは音声が停止する場合があります")});
+}
 let visibleLimit=10;
 function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
@@ -351,7 +392,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=40;
+const APP_VERSION=41;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
