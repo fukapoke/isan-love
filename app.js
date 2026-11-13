@@ -17,6 +17,7 @@ function showTab(tab){document.querySelectorAll("main section").forEach(x=>x.cla
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.tab);const menu=$("moreMenu");if(menu)menu.open=false;window.scrollTo({top:0,behavior:"smooth"})}));
 document.querySelectorAll("[data-home-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.homeTab);window.scrollTo({top:0,behavior:"smooth"})}));
 
+document.querySelectorAll("[data-culture]").forEach(button=>button.addEventListener("click",()=>{const category=button.dataset.culture;document.querySelectorAll("[data-culture]").forEach(x=>x.classList.toggle("active",x===button));document.querySelectorAll("[data-culture-topic]").forEach(x=>{x.hidden=category!=="all"&&x.dataset.cultureTopic!==category})}));
 const googleNotesKey="isanlove_google_notes_v1";
 let googleNotes=get(googleNotesKey,[]);
 const specialReplies={
@@ -437,7 +438,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=43;
+const APP_VERSION=44;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
