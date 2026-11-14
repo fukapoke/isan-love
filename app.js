@@ -637,7 +637,10 @@ function parseFonData(raw){
   if(!/[\u0E00-\u0E7F]/.test(th))throw Error("タイ文字が見つからないよ");
   if(th.length>1000||ja.length>2000||ka.length>1000)throw Error("文章が長すぎるため登録できないよ");
   const lang=["thai","標準タイ語","タイ語"].includes(rawLang)?"thai":["isan","イサーン語","イサン語"].includes(rawLang)?"isan":"unverified";
-  return {th,ja,ka,lang};
+  const replies=Array.isArray(obj.replies)?obj.replies.slice(0,3).filter(v=>Array.isArray(v)&&v.length>=3&&v.slice(0,4).every(t=>typeof t==="string"&&t.length<=1000)).map(v=>v.slice(0,4)):[];
+  const savedDate=validDay(obj.savedDate)?obj.savedDate:localDay();
+  const title=String(obj.title||"").slice(0,120);
+  return {th,ja,ka,lang,replies,savedDate,title};
 }
 function registerFonData(){
   const status=$("fonImportStatus");let data;
@@ -646,7 +649,7 @@ function registerFonData(){
   if(!confirm("次の内容で辞書に登録する？\n\n"+data.th+"\n"+data.ja+"\n"+data.ka+"\n分類："+langName+"\n\n同じFonの文章がある場合は更新します。"))return;
   const next=own.filter(v=>!((v.cat==="💜Fon🩷"||String(v.cat||"").startsWith("Fon辞書"))&&normal(v.th)===normal(data.th)));
   const previous=own.find(x=>(x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"))&&normal(x.th)===normal(data.th));
-  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",source:"fon",savedDate:previous?entryDay(previous):localDay()});
+  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",source:"fon",savedDate:previous?entryDay(previous)||data.savedDate:data.savedDate,replies:data.replies.length?data.replies:(previous?.replies||[])});
   if(!store(ownKey,next))return;
   own=next;pending=pending.filter(x=>normal(x.th)!==normal(data.th));store(pendingKey,pending);
   $("msgIn").value=data.th;renderPending();render();findMessage();
@@ -666,7 +669,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=58;
+const APP_VERSION=59;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
