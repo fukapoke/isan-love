@@ -94,6 +94,39 @@ function setFonDate(id,date){
  const next=own.map(x=>x.id===id?{...x,savedDate:date}:x);
  if(store(ownKey,next)){own=next;render();renderCalendar()}
 }
+
+function renderMemories(){
+ const target=$("memoryList");if(!target)return;
+ const filter=$("memoryFilter").value,q=$("memorySearch").value.trim().toLowerCase();
+ const entries=own.filter(x=>{
+  if(filter==="fon"&&entrySource(x)!=="fon")return false;
+  if(filter==="favorite"&&!x.favorite)return false;
+  if(filter==="undated"&&entryDay(x))return false;
+  return [x.th,x.ja,x.ka,x.title,x.savedDate].some(v=>String(v||"").toLowerCase().includes(q));
+ }).sort((a,b)=>(entryDay(b)||"").localeCompare(entryDay(a)||""));
+ $("memoryCount").textContent=entries.length+"件の保存済み記録";
+ target.innerHTML=entries.length?entries.map(x=>{
+  const replies=Array.isArray(x.replies)?x.replies:[];
+  return '<article class="card"><div class="row" style="justify-content:space-between;align-items:center"><small>'+esc(entryDay(x)||"日付未設定")+' · '+(entrySource(x)==="fon"?"💗 Fonから":entrySource(x)==="mine"?"📝 自分":"❔ 未分類")+'</small><button data-memory-fav="'+esc(x.id)+'" aria-label="お気に入りを切り替える">'+(x.favorite?"💜 お気に入り":"♡ お気に入り")+'</button></div>'
+  +(x.title?'<h3>'+esc(x.title)+'</h3>':"")
+  +'<div class="thai" style="white-space:pre-wrap">'+esc(x.th)+'</div><p>'+esc(x.ja||"")+'</p><div class="kana">'+esc(x.ka||"")+'</div>'
+  +'<details class="fon-details"><summary>💌 返信候補 '+replies.length+'件</summary>'
+  +(replies.length?replies.map(v=>'<div class="reply-card"><b>'+esc(v[0])+'</b><p class="thai">'+esc(v[1])+'</p><p>'+esc(v[2])+'</p><p class="kana">'+esc(v[3]||"")+'</p></div>').join(""):'<p class="note">返信候補はまだ保存されていないよ。</p>')
+  +'</details><div class="row"><button data-memory-open="'+esc(x.id)+'">📖 辞書で開く</button><button data-memory-date="'+esc(x.id)+'">📅 日付を変更</button></div></article>';
+ }).join(""):'<div class="card"><p class="note">この条件の記録はまだないよ。LINE翻訳から保存するとここに並ぶよ。</p></div>';
+}
+$("memorySearch").addEventListener("input",renderMemories);
+$("memoryFilter").addEventListener("change",renderMemories);
+$("memoryImport").addEventListener("click",()=>showTab("translate"));
+$("memoryList").addEventListener("click",e=>{
+ const fav=e.target.closest("[data-memory-fav]");
+ if(fav){const next=own.map(x=>String(x.id)===fav.dataset.memoryFav?{...x,favorite:!x.favorite}:x);if(store(ownKey,next)){own=next;renderMemories()}return}
+ const open=e.target.closest("[data-memory-open]");
+ if(open){const x=own.find(v=>String(v.id)===open.dataset.memoryOpen);if(x){$("q").value=x.th;showTab("search");render()}return}
+ const date=e.target.closest("[data-memory-date]");
+ if(date){const x=own.find(v=>String(v.id)===date.dataset.memoryDate);if(!x)return;const value=prompt("思い出の日付を YYYY-MM-DD で入力してね",entryDay(x)||localDay());if(value!==null){if(validDay(value)){setFonDate(x.id,value);renderMemories()}else alert("日付を確認してね")}}
+});
+
 function renderCalendar(){
  const [year,month]=calMonth.split("-").map(Number);
  $("calTitle").textContent=year+"年"+month+"月";
@@ -575,7 +608,7 @@ if($("recordStart")){
  window.addEventListener("pagehide",recordingCleanup);
 }
 let visibleLimit=10;
-function render(){if($("calGrid"))renderCalendar();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
+function render(){if($("calGrid"))renderCalendar();if($("memoryList"))renderMemories();const q=$("q").value.trim().toLowerCase(),items=all().filter(x=>(!isanOnly||languageOf(x)==="isan")&&[x.ja,x.th,x.ka,x.cat].some(v=>String(v||"").toLowerCase().includes(q)));$("count").textContent=items.length+"件表示 / 全"+all().length+"件";$("results").innerHTML=items.slice(0,visibleLimit).map(x=>'<article class="card"><details class="entry-fold"><summary><small>'+esc(x.cat)+(languageOf(x)==='isan'?' 🌾 イサーン語':languageOf(x)==='thai'?' 🇹🇭 標準タイ語':own.some(v=>v.id===x.id)?' ❔ 未判定':'')+'</small> · '+esc(x.ja)+'</summary><div class="thai">'+esc(x.th)+'</div><div class="kana">'+esc(x.ka)+'</div><p>'+esc(x.ja)+'</p><div class="row"><button data-say="'+esc(x.id)+'">🔊 発音を確認</button>'+(own.some(v=>v.id===x.id)?'<button data-edit-lang="'+esc(x.id)+'">言語を変更</button><button data-delete="'+esc(x.id)+'">削除</button>':"")+'</div>'+(own.some(v=>v.id===x.id)?'<div class="fon-details"><b>🎙️ この言葉のボイスメッセージ</b><p class="note">音声はこの端末だけに保存。公開されません。JSONバックアップには含まれないので、元ファイルも残してね。</p><input type="file" accept="audio/*,video/mp4,.m4a,.mp4" data-voice-file="'+esc(x.id)+'"><div class="row"><button data-voice-save="'+esc(x.id)+'">💾 音声を保存</button><button data-voice-play="'+esc(x.id)+'">▶️ 再生</button><button data-voice-delete="'+esc(x.id)+'">音声削除</button></div></div>':'')+showFonExtras(x)+'</details></article>').join("")+(items.length>visibleLimit?'<button id="loadMoreEntries" class="secondary">さらに10件表示（残り'+(items.length-visibleLimit)+'件）</button>':'')||"<p>一致する例文がありません</p>"}
 $("q").addEventListener("input",()=>{visibleLimit=10;render()});
 $("results").addEventListener("click",e=>{if(e.target.closest("[data-voice-save],[data-voice-play],[data-voice-delete]")){handleVoiceAction(e);return}if(e.target.closest("#loadMoreEntries")){visibleLimit+=10;render()}});$("isanOnly").addEventListener("click",()=>{isanOnly=!isanOnly;$("isanOnly").classList.toggle("active",isanOnly);render()});document.querySelectorAll("[data-category]").forEach(b=>b.addEventListener("click",()=>{$("q").value=b.dataset.category;render()}));
 $("loverExamples").addEventListener("click",()=>{$("q").value="愛情・大切なもの";showTab("search");render()});
@@ -705,7 +738,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=60;
+const APP_VERSION=61;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
