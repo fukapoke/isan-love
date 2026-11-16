@@ -711,18 +711,32 @@ function parseFonData(raw){
   const title=String(obj.title||"").slice(0,120);
   return {th,ja,ka,lang,replies,savedDate,title};
 }
+function showFonImportPreview(){
+ const box=$("fonImportPreview"),status=$("fonImportStatus"),button=$("fonImportButton");
+ try{
+  const data=parseFonData($("fonImportText").value);
+  const existing=own.find(x=>entrySource(x)==="fon"&&normal(x.th)===normal(data.th));
+  box.classList.remove("hide");
+  box.innerHTML='<b>② 保存する内容を確認</b><p class="thai" style="white-space:pre-wrap">'+esc(data.th)+'</p><p>'+esc(data.ja)+'</p><p class="kana">'+esc(data.ka)+'</p><small>日付：'+esc(data.savedDate)+'　返信候補：'+data.replies.length+'件</small>';
+  button.textContent=existing?"💾 保存済みの内容を更新する":"💾 この思い出を保存する";
+  status.textContent=existing?"この文章はすでに保存済み。必要なときだけ更新してね。":"内容を確認して、保存ボタンを押してね。";
+ }catch(e){box.classList.add("hide");button.textContent="💾 ② この思い出を保存する";status.textContent=$("fonImportText").value.trim()?e.message:""}
+}
+$("fonImportText").addEventListener("input",()=>{$("fonImportViewSaved").classList.add("hide");showFonImportPreview()});
+$("fonImportViewSaved").addEventListener("click",()=>{showTab("memories");$("memoryFilter").value="fon";$("memorySearch").value="";renderMemories();window.scrollTo({top:0,behavior:"smooth"})});
 function registerFonData(){
-  const status=$("fonImportStatus");let data;
-  try{data=parseFonData($("fonImportText").value)}catch(e){status.textContent=e.message;return}
-  const langName=data.lang==="isan"?"イサーン語":data.lang==="thai"?"標準タイ語":"未判定";
-  if(!confirm("次の内容で辞書に登録する？\n\n"+data.th+"\n"+data.ja+"\n"+data.ka+"\n分類："+langName+"\n\n同じFonの文章がある場合は更新します。"))return;
-  const next=own.filter(v=>!((v.cat==="💜Fon🩷"||String(v.cat||"").startsWith("Fon辞書"))&&normal(v.th)===normal(data.th)));
-  const previous=own.find(x=>(x.cat==="💜Fon🩷"||String(x.cat||"").startsWith("Fon辞書"))&&normal(x.th)===normal(data.th));
-  next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",source:"fon",savedDate:previous?entryDay(previous)||data.savedDate:data.savedDate,replies:data.replies.length?data.replies:(previous?.replies||[])});
-  if(!store(ownKey,next))return;
-  own=next;pending=pending.filter(x=>normal(x.th)!==normal(data.th));store(pendingKey,pending);
-  $("msgIn").value=data.th;renderPending();render();findMessage();
-  status.textContent="💜 Fonの辞書に登録したよ！ 辞書タブの「💜Fon🩷」で確認できるよ。";
+ const status=$("fonImportStatus");let data;
+ try{data=parseFonData($("fonImportText").value)}catch(e){status.textContent=e.message;return}
+ const previous=own.find(x=>entrySource(x)==="fon"&&normal(x.th)===normal(data.th));
+ if(previous&&!confirm("この言葉は保存済みだよ。登録内容を更新する？"))return;
+ const next=own.filter(x=>!(entrySource(x)==="fon"&&normal(x.th)===normal(data.th)));
+ next.push({id:previous?.id||"fon"+Date.now(),...data,cat:"💜Fon🩷",source:"fon",savedDate:previous?entryDay(previous)||data.savedDate:data.savedDate,replies:data.replies.length?data.replies:(previous?.replies||[]),favorite:previous?.favorite||false});
+ if(!store(ownKey,next))return;
+ own=next;pending=pending.filter(x=>normal(x.th)!==normal(data.th));store(pendingKey,pending);
+ renderPending();render();showFonImportPreview();
+ status.textContent="✅ 保存できたよ！ 下のボタンから思い出一覧で確認してね。";
+ $("fonImportViewSaved").classList.remove("hide");
+ $("fonImportViewSaved").scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 $("fonImportButton").addEventListener("click",registerFonData);
 try{
@@ -730,7 +744,9 @@ try{
  if(hash){
   const data=parseFonData(decodeURIComponent(hash));
   $("fonImportText").value=JSON.stringify(data,null,2);
-  showTab("translate");$("fonImportStatus").textContent="つーちゃんの翻訳を読み込んだよ。内容を確認して登録してね。";
+  showTab("translate");
+  showFonImportPreview();
+  $("fonImportCard").scrollIntoView({behavior:"auto",block:"start"});
   history.replaceState(null,"",location.pathname+location.search);
  }
 }catch(e){$("fonImportStatus").textContent="共有された翻訳データを読み取れませんでした："+e.message}
@@ -738,7 +754,7 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=61;
+const APP_VERSION=62;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
