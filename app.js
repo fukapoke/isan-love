@@ -754,7 +754,58 @@ try{
 renderPending();
 render();load();
 // Updating code never clears the private Fon dictionary in localStorage.
-const APP_VERSION=62;
+
+const quickPhrases=[
+ ["🌅","おはよう",[
+ ["sweet","isan","อรุณสวัสดิ์เด้อที่ฮัก 💜 มื้อนี้กะคิดฮอดเจ้าเด้อ","おはよう、愛しい人。今日も君が恋しいよ。","アルン・サワット・ドー・ティー・ハック／ムー・ニー・ガ・キット・ホート・ジャオ・ドー"],
+ ["gentle","thai","อรุณสวัสดิ์นะครับที่รัก ขอให้วันนี้เป็นวันที่ดีนะครับ 💜","おはよう、愛しい人。今日もいい一日になりますように。","アルン・サワット・ナ・クラップ・ティーラック／コー・ハイ・ワンニー・ペン・ワン・ティー・ディー"],
+ ["casual","thai","อรุณสวัสดิ์ครับ วันนี้เป็นไงบ้าง 😊","おはよう。今日は調子どう？","アルン・サワット・クラップ／ワンニー・ペン・ンガイ・バーン"]]],
+ ["🌙","おやすみ",[
+ ["sweet","isan","ฝันดีเด้อที่ฮัก ข้อยฮักเจ้าหลาย ๆ 💜","おやすみ、愛しい人。すごく愛してるよ。","ファン・ディー・ドー・ティー・ハック／コイ・ハック・ジャオ・ラーイラーイ"],
+ ["gentle","thai","ฝันดีนะครับที่รัก พักผ่อนเยอะ ๆ นะครับ","おやすみ、愛しい人。ゆっくり休んでね。","ファン・ディー・ナ・クラップ・ティーラック／パックポーン・ユッユッ"],
+ ["casual","thai","ฝันดีนะครับ เจอกันพรุ่งนี้ 😊","おやすみ。また明日ね。","ファン・ディー・ナ・クラップ／ジュー・ガン・プルンニー"]]],
+ ["🥰","愛してる",[
+ ["sweet","isan","ข้อยฮักเจ้าหลาย ๆ เด้อที่ฮัก 💜","愛しい人、君をすごく愛してるよ。","コイ・ハック・ジャオ・ラーイラーイ・ドー・ティー・ハック"],
+ ["gentle","thai","ผมรักคุณนะครับ และจะอยู่ข้าง ๆ คุณเสมอ","愛してるよ。いつも君のそばにいるよ。","ポム・ラック・クン・ナ・クラップ／レ・ジャ・ユー・カーンカーン・クン・サムー"],
+ ["casual","thai","รักนะครับ 💜","愛してるよ。","ラック・ナ・クラップ"]]],
+ ["🥹","会いたい",[
+ ["sweet","isan","คิดฮอดเจ้าหลาย ๆ อยากกอดเจ้าเด้อ 💜","すごく会いたい。君を抱きしめたいよ。","キット・ホート・ジャオ・ラーイラーイ／ヤーク・ゴート・ジャオ・ドー"],
+ ["gentle","thai","คิดถึงคุณนะครับ หวังว่าจะได้เจอกันเร็ว ๆ นี้","君が恋しいよ。早く会えたらいいな。","キット・トゥン・クン・ナ・クラップ／ワン・ワー・ジャ・ダイ・ジュー・ガン・レウレウ・ニー"],
+ ["casual","thai","อยากเจอคุณจัง 😊","すごく会いたいな。","ヤーク・ジュー・クン・ジャン"]]],
+ ["💗","心配してる",[
+ ["sweet","thai","เป็นห่วงคุณมากนะครับที่รัก ดูแลตัวเองด้วยนะ 💜","すごく心配してるよ、愛しい人。体を大切にしてね。","ペン・フアン・クン・マーク・ナ・クラップ・ティーラック／ドゥーレー・トゥアエーン・ドゥアイ・ナ"],
+ ["gentle","thai","เหนื่อยไหมครับ พักบ้างนะครับ","疲れてない？ 少し休んでね。","ヌアイ・マイ・クラップ／パック・バーン・ナ・クラップ"],
+ ["casual","thai","โอเคไหมครับ?","大丈夫？","オーケー・マイ・クラップ"]]],
+ ["🙏","謝りたい",[
+ ["sweet","thai","ขอโทษนะครับที่รัก ผมไม่อยากทำให้คุณเสียใจเลย","ごめんね、愛しい人。君を悲しませたくなかったんだ。","コー・トート・ナ・クラップ・ティーラック／ポム・マイ・ヤーク・タム・ハイ・クン・シアジャイ・ルーイ"],
+ ["gentle","thai","ผมขอโทษนะครับ เราคุยกันดี ๆ ได้ไหม","ごめんね。落ち着いて話せるかな？","ポム・コー・トート・ナ・クラップ／ラオ・クイ・ガン・ディーディー・ダイ・マイ"],
+ ["casual","thai","ขอโทษนะครับ","ごめんね。","コー・トート・ナ・クラップ"]]],
+ ["🚗","運転に気をつけて",[
+ ["sweet","thai","ขับรถระวัง ๆ นะครับที่รัก ผมเป็นห่วงคุณ 💜","運転気をつけてね、愛しい人。君が心配だよ。","カップ・ロット・ラワンラワン・ナ・クラップ・ティーラック／ポム・ペン・フアン・クン"],
+ ["gentle","thai","เดินทางปลอดภัยนะครับ ถึงแล้วบอกผมด้วย","気をつけて行ってね。着いたら教えてね。","ドゥーンターン・プロートパイ・ナ・クラップ／トゥン・レーオ・ボーク・ポム・ドゥアイ"],
+ ["casual","thai","ขับรถดี ๆ นะครับ","運転気をつけてね。","カップ・ロット・ディーディー・ナ・クラップ"]]],
+ ["🍚","ご飯食べた？",[
+ ["sweet","thai","กินข้าวหรือยังครับที่รัก อย่าลืมกินข้าวนะ 💜","ご飯食べた、愛しい人？ ちゃんと食べてね。","ギン・カーオ・ルー・ヤン・クラップ・ティーラック／ヤー・ルーム・ギン・カーオ・ナ"],
+ ["gentle","thai","กินข้าวหรือยังครับ ดูแลสุขภาพด้วยนะ","ご飯食べた？ 体も大事にしてね。","ギン・カーオ・ルー・ヤン・クラップ／ドゥーレー・スッカパープ・ドゥアイ・ナ"],
+ ["casual","thai","กินข้าวยังครับ?","ご飯食べた？","ギン・カーオ・ヤン・クラップ"]]]
+];
+let quickSelected=0;
+function renderQuick(){
+ const target=$("quickSituations");if(!target)return;
+ target.innerHTML=quickPhrases.map((x,i)=>'<button data-quick="'+i+'" class="'+(quickSelected===i?"active":"")+'">'+x[0]+' '+esc(x[1])+'</button>').join("");
+ const tone=$("quickTone").value,language=$("quickLanguage").value;
+ const matches=quickPhrases[quickSelected][2].filter(v=>(language==="all"||v[1]===language));
+ const ranked=matches.slice().sort((a,b)=>Number(b[0]===tone)-Number(a[0]===tone));
+ $("quickResult").innerHTML=ranked.length?ranked.map((v,i)=>'<div class="card quick-card"><small>'+(v[1]==="isan"?"🌾 イサーン語":"🇹🇭 標準タイ語")+' · '+({sweet:"💗 甘い",gentle:"🌷 優しい",casual:"😊 普段どおり"}[v[0]])+'</small><p class="thai">'+esc(v[2])+'</p><p><b>'+esc(v[3])+'</b></p><p class="kana">'+esc(v[4])+'</p><button class="primary" data-quick-copy="'+i+'" style="width:100%">📋 LINEにコピー</button></div>').join(""):'<div class="card"><p>この場面・言語の例文はまだないよ。「どちらでも」に切り替えてね。</p></div>';
+ $("quickResult")._shown=ranked;
+}
+$("quickSituations").addEventListener("click",e=>{const b=e.target.closest("[data-quick]");if(b){quickSelected=Number(b.dataset.quick);renderQuick()}});
+$("quickTone").addEventListener("change",renderQuick);
+$("quickLanguage").addEventListener("change",renderQuick);
+$("quickResult").addEventListener("click",e=>{const b=e.target.closest("[data-quick-copy]");if(!b)return;const v=$("quickResult")._shown?.[Number(b.dataset.quickCopy)];if(!v)return;navigator.clipboard.writeText(v[2]).then(()=>{b.textContent="✅ コピーしたよ！ LINEに貼り付けてね"}).catch(()=>{const ta=document.createElement("textarea");ta.value=v[2];document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();b.textContent="✅ コピーしたよ！ LINEに貼り付けてね"})});
+renderQuick();
+
+const APP_VERSION=63;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
