@@ -805,7 +805,33 @@ $("quickLanguage").addEventListener("change",renderQuick);
 $("quickResult").addEventListener("click",e=>{const b=e.target.closest("[data-quick-copy]");if(!b)return;const v=$("quickResult")._shown?.[Number(b.dataset.quickCopy)];if(!v)return;navigator.clipboard.writeText(v[2]).then(()=>{b.textContent="✅ コピーしたよ！ LINEに貼り付けてね"}).catch(()=>{const ta=document.createElement("textarea");ta.value=v[2];document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();b.textContent="✅ コピーしたよ！ LINEに貼り付けてね"})});
 renderQuick();
 
-const APP_VERSION=63;
+
+let homeDailyOffset=0,homeDailyShownDate="",homeDailyCurrent=null;
+function refreshHomeDaily(){
+ const el=$("homeDailyThai");if(!el||!sceneLessons.length)return;
+ const date=localDay();
+ if(date!==homeDailyShownDate){homeDailyShownDate=date;homeDailyOffset=0}
+ const [year,month,day]=date.split("-").map(Number);
+ const dayNumber=Math.floor(Date.UTC(year,month-1,day)/86400000);
+ const index=((dayNumber*7+homeDailyOffset)%sceneLessons.length+sceneLessons.length)%sceneLessons.length;
+ const x=sceneLessons[index];homeDailyCurrent=x;
+ el.textContent=x.th;$("homeDailyKana").textContent=x.ka||"";
+ $("homeDailyJa").textContent="「"+x.ja+"」";
+ $("homeDailyDate").textContent=month+"/"+day;
+}
+$("homeDailyNext").addEventListener("click",()=>{homeDailyOffset++;refreshHomeDaily()});
+$("homeDailyCopy").addEventListener("click",()=>{
+ if(!homeDailyCurrent)return;
+ const value=homeDailyCurrent.th;
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(()=>alert("LINEに貼り付けてね 💜")).catch(()=>prompt("コピーしてね",value))}
+ else prompt("コピーしてね",value);
+});
+refreshHomeDaily();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshHomeDaily()});
+window.addEventListener("focus",refreshHomeDaily);
+setInterval(()=>{if(!document.hidden)refreshHomeDaily()},60000);
+
+const APP_VERSION=64;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
