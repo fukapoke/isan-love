@@ -212,6 +212,9 @@ if(loveBtn)loveBtn.addEventListener("click",()=>{
  const next=[...own,...additions];if(store(ownKey,next)){own=next;$("q").value="Fon：";showTab("search");render();alert("ふたりの会話を保存したよ 💜 2つのカードを開いて、それぞれの音声を選んでね")}
 });
 const sceneLessons=[
+ ["😂 朝のジョーク","① まだ夢の中にいるの？","ยังอยู่ในฝันเหรอ?","ヤン・ユー・ナイ・ファン・ロー？"],
+ ["😂 朝のジョーク","② 可愛いね","น่ารักจัง","ナーラック・ジャン"],
+
  ["💜 恋愛","会いたいよ","คิดฮอดเจ้า","キット・ホート・ジャオ"],
  ["💜 恋愛","愛してるよ","ข้อยฮักเจ้า","コイ・ハック・ジャオ"],
  ["💜 恋愛","私のこと愛してる？","เจ้าฮักข้อยบ่?","ジャオ・ハック・コイ・ボー？"],
@@ -850,7 +853,36 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshHom
 window.addEventListener("focus",refreshHomeDaily);
 setInterval(()=>{if(!document.hidden)refreshHomeDaily()},60000);
 
-const APP_VERSION=67;
+
+const morningJokeLines=["ยังอยู่ในฝันเหรอ?","น่ารักจัง"];
+let morningJokeToken=0;
+function playMorningJoke(rate){
+ if(!("speechSynthesis" in window)){$("morningJokeStatus").textContent="この端末では音声読み上げが使えないよ";return}
+ const token=++morningJokeToken;
+ speechSynthesis.cancel();
+ const voice=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase().startsWith("th"));
+ const status=$("morningJokeStatus");
+ function next(i){
+  if(token!==morningJokeToken)return;
+  if(i>=morningJokeLines.length){status.textContent="2つとも再生したよ 💜";return}
+  status.textContent=(i+1)+"つ目を再生中…";
+  const u=new SpeechSynthesisUtterance(morningJokeLines[i]);
+  u.lang="th-TH";u.rate=rate;if(voice)u.voice=voice;
+  u.onend=()=>next(i+1);
+  u.onerror=()=>{if(token===morningJokeToken)status.textContent="音声が止まったよ。もう一度押してね。"};
+  speechSynthesis.speak(u);
+ }
+ next(0);
+}
+$("morningJokePlay").addEventListener("click",()=>playMorningJoke(0.9));
+$("morningJokeSlow").addEventListener("click",()=>playMorningJoke(0.65));
+$("morningJokeCopy").addEventListener("click",()=>{
+ const value=morningJokeLines.join("\n");
+ if(navigator.clipboard?.writeText)navigator.clipboard.writeText(value).then(()=>$("morningJokeStatus").textContent="2つまとめてコピーしたよ 💜").catch(()=>prompt("コピーしてね",value));
+ else prompt("コピーしてね",value);
+});
+
+const APP_VERSION=68;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
