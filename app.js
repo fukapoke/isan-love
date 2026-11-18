@@ -13,6 +13,12 @@ const correctedThai="ฉันจะรอคุยกับคุณนะค�
 if(own.some(x=>x.th===correctedThai&&x.lang==="isan")){const revised=own.map(x=>x.th===correctedThai&&x.lang==="isan"?{...x,lang:"thai"}:x);if(store(ownKey,revised))own=revised;}
 const normal=s=>String(s||"").replace(/[\s\u200b.,!?！？。、「」]/g,"").toLowerCase();
 const known={"ฉันคิดถึงคุณนะคะ":{ja:"あなたが恋しいです／会いたいな",ka:"チャン・キットトゥン・クン・ナ・カ"},"คิดถึงนะ":{ja:"会いたいよ／恋しいよ",ka:"キットトゥン・ナ"}};
+
+// Fon profile: private, device-local notes. No personal facts embedded in the public source.
+const fpFields={fpName:"name",fpBirth:"birth",fpHometown:"hometown",fpColor:"color",fpFamily:"family",fpNotes:"notes"};
+try{const p=JSON.parse(localStorage.getItem("isanlove_fon_profile_v1")||"{}");for(const [id,key] of Object.entries(fpFields))if($(id))$(id).value=String(p[key]||"")}catch{}
+$("fpSave")?.addEventListener("click",()=>{const p={};for(const [id,key] of Object.entries(fpFields))p[key]=$(id).value;try{localStorage.setItem("isanlove_fon_profile_v1",JSON.stringify(p));$("fpStatus").textContent="💜 この端末に保存しました"}catch{$("fpStatus").textContent="保存できませんでした。ブラウザの設定を確認してください"}});
+
 function showTab(tab){document.querySelectorAll("main section").forEach(x=>x.classList.toggle("hide",x.id!==tab));document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab))}
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.tab);const menu=$("moreMenu");if(menu)menu.open=false;window.scrollTo({top:0,behavior:"smooth"})}));
 document.querySelectorAll("[data-home-tab]").forEach(b=>b.addEventListener("click",()=>{showTab(b.dataset.homeTab);window.scrollTo({top:0,behavior:"smooth"})}));
