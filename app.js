@@ -837,7 +837,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshHom
 window.addEventListener("focus",refreshHomeDaily);
 setInterval(()=>{if(!document.hidden)refreshHomeDaily()},60000);
 
-const APP_VERSION=64;
+const APP_VERSION=66;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
@@ -856,10 +856,15 @@ async function checkUpdate(manual=false){
   if(!match)throw new Error("バージョンを確認できません");
   const remote=Number(match[1]);
   if(remote>APP_VERSION){
+   // Avoid an endless reload loop when cached JS and published HTML disagree.
+   const attempted=Number(new URL(location.href).searchParams.get("app_update")||0);
+   if(attempted>=remote){
+    updateStatus.textContent="更新の反映待ちです。少し時間をおいて再度開いてね。";
+    return;
+   }
    updateStatus.textContent="v"+remote+" が見つかりました。更新します…";
    const url=new URL(location.href);
    url.searchParams.set("app_update",String(remote));
-   // Refresh app assets, not the user's saved localStorage.
    location.replace(url.href);
    return;
   }
