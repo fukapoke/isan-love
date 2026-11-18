@@ -825,6 +825,19 @@ function refreshHomeDaily(){
  $("homeDailyJa").textContent="「"+x.ja+"」";
  $("homeDailyDate").textContent=month+"/"+day;
 }
+function speakHomeDaily(rate){
+ if(!homeDailyCurrent)return;
+ if(!("speechSynthesis" in window)){alert("この端末では音声読み上げを利用できないよ");return}
+ speechSynthesis.cancel();
+ const utterance=new SpeechSynthesisUtterance(homeDailyCurrent.th);
+ utterance.lang="th-TH";utterance.rate=rate;
+ const thaiVoice=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase().startsWith("th"));
+ if(thaiVoice)utterance.voice=thaiVoice;
+ utterance.onerror=()=>alert("音声を再生できなかったよ。端末のタイ語音声設定を確認してね。");
+ speechSynthesis.speak(utterance);
+}
+$("homeDailySpeak").addEventListener("click",()=>speakHomeDaily(0.9));
+$("homeDailySlow").addEventListener("click",()=>speakHomeDaily(0.65));
 $("homeDailyNext").addEventListener("click",()=>{homeDailyOffset++;refreshHomeDaily()});
 $("homeDailyCopy").addEventListener("click",()=>{
  if(!homeDailyCurrent)return;
@@ -837,7 +850,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshHom
 window.addEventListener("focus",refreshHomeDaily);
 setInterval(()=>{if(!document.hidden)refreshHomeDaily()},60000);
 
-const APP_VERSION=66;
+const APP_VERSION=67;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
