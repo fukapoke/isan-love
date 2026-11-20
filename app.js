@@ -882,7 +882,7 @@ $("morningJokeCopy").addEventListener("click",()=>{
  else prompt("コピーしてね",value);
 });
 
-const APP_VERSION=69;
+const APP_VERSION=70;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
@@ -925,4 +925,54 @@ if("serviceWorker" in navigator){
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate()});
 window.addEventListener("pageshow",()=>checkUpdate());
+
+/* v70: Universal Thai-script playback for text throughout ISAN LOVE.
+   Buttons are generated from displayed text only; saved entries are unchanged. */
+(function installUniversalThaiAudio(){
+ const thai=/[\u0E00-\u0E7F]/;
+ const skip='button,input,textarea,select,option,script,style,svg,[contenteditable="true"],[data-universal-audio]';
+ let scheduled=false,scanning=false;
+ function speak(text,slow){
+  if(!('speechSynthesis' in window)){alert('この端末は音声読み上げに対応していません');return}
+  const synth=window.speechSynthesis;
+  synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='th-TH';u.rate=slow?0.65:0.88;
+  const v=synth.getVoices().find(v=>v.lang.toLowerCase().startsWith('th'));
+  if(v)u.voice=v;
+  u.onerror=()=>{const st=document.getElementById('universalAudioStatus');if(st)st.textContent='再生できません。iPhoneのタイ語音声設定を確認してね。'};
+  synth.speak(u);
+ }
+ function scan(){
+  scheduled=false;if(scanning)return;scanning=true;
+  try{
+   const main=document.querySelector('main');if(!main)return;
+   const walker=document.createTreeWalker(main,NodeFilter.SHOW_TEXT);
+   const nodes=[];let node;
+   while((node=walker.nextNode())){
+    const raw=node.nodeValue||'',value=raw.trim();
+    if(!thai.test(value)||value.length>500||!node.parentElement||node.parentElement.closest(skip))continue;
+    if(node.parentElement.closest('[data-universal-audio-host]'))continue;
+    if(node.nextSibling&&node.nextSibling.nodeType===1&&node.nextSibling.hasAttribute('data-universal-audio'))continue;
+    nodes.push([node,value]);
+   }
+   for(const [n,value] of nodes){
+    if(!n.isConnected)continue;
+    const group=document.createElement('span');
+    group.dataset.universalAudio='';
+    group.className='universal-audio-controls';
+    const play=document.createElement('button');play.type='button';play.textContent='🔊';play.title='タイ語を再生';play.setAttribute('aria-label','タイ語を再生');play.className='universal-audio-btn';
+    const slow=document.createElement('button');slow.type='button';slow.textContent='🐢';slow.title='ゆっくり再生';slow.setAttribute('aria-label','タイ語をゆっくり再生');slow.className='universal-audio-btn';
+    play.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();speak(value,false)});
+    slow.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();speak(value,true)});
+    group.append(play,slow);n.parentNode.insertBefore(group,n.nextSibling);
+   }
+  }finally{scanning=false}
+ }
+ function queue(){if(!scheduled){scheduled=true;requestAnimationFrame(scan)}}
+ const observer=new MutationObserver(queue);
+ const start=()=>{const main=document.querySelector('main');if(!main)return;observer.observe(main,{childList:true,subtree:true,characterData:true});queue()};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+
 })();
