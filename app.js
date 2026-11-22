@@ -882,7 +882,7 @@ $("morningJokeCopy").addEventListener("click",()=>{
  else prompt("コピーしてね",value);
 });
 
-const APP_VERSION=73;
+const APP_VERSION=74;
 const updateButton=$("manualUpdate"),updateStatus=$("manualUpdateStatus");
 let updateBusy=false;
 async function checkUpdate(manual=false){
