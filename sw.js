@@ -1,5 +1,5 @@
-const CACHE="isan-love-v68";
-const ASSETS=["./","./index.html","./app.js","./manifest.webmanifest","./icon.svg","./examples-600.csv","./examples.js"];
+const CACHE="isan-love-v72";
+const ASSETS=["./","./index.html","./app.js","./manifest.webmanifest","./icon.svg","./examples-600.csv","./examples.js","./question-lab.js"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",event=>{event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("isan-love-")&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]))});
 self.addEventListener("fetch",event=>{const request=event.request,url=new URL(request.url);if(request.method!=="GET"||url.origin!==self.location.origin)return;event.respondWith((async()=>{try{const response=await fetch(request,{cache:"no-store"});if(response.ok){const cache=await caches.open(CACHE);cache.put(request,response.clone()).catch(()=>{})}return response}catch{return await caches.match(request,{ignoreSearch:true})||Response.error()}})())});
